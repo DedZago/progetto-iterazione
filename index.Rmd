@@ -3,7 +3,7 @@ title: ""
 author: "Daniele Zago"
 date: "2021-04-27"
 output: 
-    pdf_document:
+    rmarkdown::github_document:
         dev: png
         extra_dependencies: ["bm"]
         fig_width: 8
