@@ -22,3 +22,5 @@ setwd("/home/dede/Documents/git/progetto-iterazione")
 #8=======>
 
 # 8===================>
+
+## :()
