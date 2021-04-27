@@ -1,0 +1,22 @@
+---
+title: ""
+author: "Daniele Zago"
+date: "2021-04-27"
+output: 
+    pdf_document:
+        dev: png
+        extra_dependencies: ["bm"]
+        fig_width: 8
+        fig_height: 6
+        df_print: kable
+        latex_engine: xelatex
+---
+
+```{r index_setup, cache=FALSE, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE, engine.opts='-l', tidy=FALSE)
+knitr::knit_hooks$set(inline=function(x) prettyNum(round(x,2)))
+setwd("/home/dede/Documents/git/progetto-iterazione")
+```
+
+# Section #
+
