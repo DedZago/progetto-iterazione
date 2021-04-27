@@ -1,0 +1,91 @@
+---
+title: ""
+author: ""
+date: "2021-04-27"
+output: 
+    pdf-document:
+        fig_caption: yes        
+        dev: png
+        extra_dependencies: ["bm"]
+        df_print: kable
+        latex_engine: xelatex
+---
+
+```{r index_setup, cache=FALSE, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE, engine.opts='-l', tidy=FALSE, fig.width=14, fig.height=8)
+knitr::knit_hooks$set(inline=function(x) prettyNum(round(x,2)))
+load("data/mandarino.RData")
+library(gtools)
+mandarino$subject = factor(mandarino$subject,
+                           levels = mixedsort(levels(mandarino$subject)))
+```
+
+# Descrizione del dataset e obiettivi #
+```{r }
+head(mandarino)
+```
+
+L’esperimento è stato ripetuto per ciascun soggetto (S1 - S12) 4 volte (`repetition` 1-4) per ogni carico cognitivo (`cog_load` CL0-CL6) e per tutte le $4^2 = 16$ combinazioni di sillabe.
+Tuttavia, per alcuni soggetti mancano alcune ripetizioni dell'esperimento per motivi non specificati.
+
+
+```{r }
+table(mandarino$subject, mandarino$repetition, mandarino$cog_load)/20
+```
+
+Ci interessa $f_0$ in funzione di quello che deve dire (`syllable0` e `syllable1`).
+Studiare intonazione (come cambia $f_0$) al variare delle sillabe mentre la si pronuncia:
+
+* Interazione tra `syllabe1` e `time` $\implies$ syllabe1 influenza syllabe2
+
+* Interazione tra `syllabe2` e `time` $\implies$ syllabe2 influenza syllabe1
+
+* Interazione tra  `syllabe1`, `syllabe2` e `time` $\implies$ syllabe2 e syllabe1 si influenzano a vicenda
+
+* `cog_load` parametrino del cazo da meter drento.
+
+* Tutto questo all'interno di ogni soggetto (+ ogni ripetizione) $\implies$ modello multilevel a caso?
+
+
+# Analisi esplorativa #
+
+```{r}
+library(ggplot2)
+library(magrittr)
+
+plot_subject = function(subj, dati = mandarino){
+    # Plot frequency profiles (f_0) for an individual subject
+	#
+    # @param subj: string containing subject identifier, e.g. "S10"
+    # @param dati: dataset
+	#
+    # @return ggplot2 object
+
+    if(!subj %in% levels(dati$subject)) stop("Subject not found")
+    
+    dati %>%
+        subset(subject == subj) %>%
+        ggplot(aes(x = time, y = f0)) +
+        geom_line(aes(group = repetition, color = factor(repetition))) + 
+        facet_grid(cog_load ~  syllable1*syllable2) +
+        guides(color=guide_legend(title="repetition"))
+}
+```
+```{r plot_subj1, fig.cap="\\label{fig:subj1}Profili di $f_0$ per il soggetto S1, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
+plot_subject("S1")
+```
+```{r plot_subj2, fig.cap="\\label{fig:subj2}Profili di $f_0$ per il soggetto S2, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
+plot_subject("S2")
+```
+
+Dai grafici nelle Figure \ref{fig:subj1} e \ref{fig:subj2} si possono effettuare delle considerazioni preliminari sulle caratteristiche dei dati:
+
+* Per ciascuna combinazione di sillabe pronunciate, i soggetti presentano delle curve con delle importanti differenze individuali.
+  Questo effetto, nei soggetti `S1` e `S2` rappresentati, si osserva vistosamente ad esempio per le combinazioni di sillabe `T1-T4`, `T4-T1` e `T4-T4`.
+
+* Osserviamo inoltre una naturale variazione delle curve all'interno dello stesso soggetto, dovute alle varie ripetizioni dell'esperimento.
+
+* Il carico cognitivo non sembra avere un'influenza apprezzabile sulla forma dei profili di $f_0$.
+
+
+
