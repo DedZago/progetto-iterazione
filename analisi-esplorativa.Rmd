@@ -87,5 +87,43 @@ Dai grafici nelle Figure \ref{fig:subj1} e \ref{fig:subj2} si possono effettuare
 
 * Il carico cognitivo non sembra avere un'influenza apprezzabile sulla forma dei profili di $f_0$.
 
+```{r}
+plot_repetition = function(repetit, dati = mandarino){
+    # Plot frequency profiles (f_0) for an individual subject
+	#
+    # @param repetit: integer containing repetition number, e.g. 4
+    # @param dati: dataset
+	#
+    # @return ggplot2 object
+
+    if(!repetit %in% unique(dati$repetition)) stop("Subject not found")
+    
+    dati %>%
+        subset(repetition == repetit) %>%
+        ggplot(aes(x = time, y = f0)) +
+        geom_line(aes(group = subject, color = substring(subject, 2))) + 
+        facet_grid(cog_load ~  syllable1*syllable2) +
+        guides(color=guide_legend(title="Subject"))
+}
+```
+
+```{r plot_rep2, fig.cap="\\label{fig:rep2} Profili di $f_0$ per la ripetizione 1, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
+plot_repetition(1)
+```
 
 
+```{r plot_rep2, fig.cap="\\label{fig:rep2} Profili di $f_0$ per la ripetizione 2, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
+plot_repetition(2)
+```
+```{r plot_rep3, fig.cap="\\label{fig:rep3} Profili di $f_0$ per la ripetizione 3, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
+plot_repetition(3)
+```
+```{r plot_rep4, fig.cap="\\label{fig:rep4} Profili di $f_0$ per la ripetizione 4, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
+plot_repetition(4)
+```
+
+Dai grafici \ref{fig:rep1}, \ref{fig:rep2}, \ref{fig:rep3} e \ref{fig:rep4} si focalizza l'attenzione sull'andamento dell'intonazione tra le varie ripetizioni mettendo in risalto la presenza dell'effetto individuale del soggetti: il soggetto numero 7, ad esempio, ha un'intonazione naturalmente più bassa rispetto agli altri soggetti.
+
+Inoltre, sembra esserci uno leggero abbassamento generale dei livelli di intonazioni dalla prima ripetizione alla quarta ripetizione.
+
+Il livello cognitivo sembra avere un effetto significativo, in particolare confrontando i profili tra ripetizioni diverse.
