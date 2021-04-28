@@ -70,24 +70,7 @@ plot_subject = function(subj, dati = mandarino){
         facet_grid(cog_load ~  syllable1*syllable2) +
         guides(color=guide_legend(title="repetition"))
 }
-```
-```{r plot_subj1, fig.cap="\\label{fig:subj1}Profili di $f_0$ per il soggetto S1, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
-plot_subject("S1")
-```
-```{r plot_subj2, fig.cap="\\label{fig:subj2}Profili di $f_0$ per il soggetto S2, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
-plot_subject("S2")
-```
 
-Dai grafici nelle Figure \ref{fig:subj1} e \ref{fig:subj2} si possono effettuare delle considerazioni preliminari sulle caratteristiche dei dati:
-
-* Per ciascuna combinazione di sillabe pronunciate, i soggetti presentano delle curve con delle importanti differenze individuali.
-  Questo effetto, nei soggetti `S1` e `S2` rappresentati, si osserva vistosamente ad esempio per le combinazioni di sillabe `T1-T4`, `T4-T1` e `T4-T4`.
-
-* Osserviamo inoltre una naturale variazione delle curve all'interno dello stesso soggetto, dovute alle varie ripetizioni dell'esperimento.
-
-* Il carico cognitivo non sembra avere un'influenza apprezzabile sulla forma dei profili di $f_0$.
-
-```{r}
 plot_repetition = function(repetit, dati = mandarino){
     # Plot frequency profiles (f_0) for an individual subject
 	#
@@ -96,18 +79,55 @@ plot_repetition = function(repetit, dati = mandarino){
 	#
     # @return ggplot2 object
 
-    if(!repetit %in% unique(dati$repetition)) stop("Subject not found")
-    
-    dati %>%
-        subset(repetition == repetit) %>%
-        ggplot(aes(x = time, y = f0)) +
-        geom_line(aes(group = subject, color = substring(subject, 2))) + 
-        facet_grid(cog_load ~  syllable1*syllable2) +
-        guides(color=guide_legend(title="Subject"))
+    if(!repetit %in% unique(dati$repetition)){
+        # Plot everything if repetition is not present
+        dati %>%
+            ggplot(aes(x = time, y = f0)) +
+            geom_line(aes(group = interaction(subject,repetition), color = substring(subject, 2))) + 
+            facet_grid(cog_load ~  syllable1*syllable2) +
+            guides(color=guide_legend(title="Subject"))
+    } else{
+        dati %>%
+            subset(repetition == repetit) %>%
+            ggplot(aes(x = time, y = f0)) +
+            geom_line(aes(group = interaction(subject,repetition), color = substring(subject, 2))) + 
+            facet_grid(cog_load ~  syllable1*syllable2) +
+            guides(color=guide_legend(title="Subject"))
+    }    
 }
 ```
+```{r plot_all, fig.cap="\\label{fig:all} Profili di $f_0$ per i soggetti sotto studio, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache = TRUE}
+plot_repetition(0) # Plot di tutti i dati
+```
 
-```{r plot_rep2, fig.cap="\\label{fig:rep2} Profili di $f_0$ per la ripetizione 1, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
+Dal grafico in Figura \ref{fig:all}, si possono effettuare delle considerazioni preliminari sulle caratteristiche dei dati:
+
+* I raggruppamenti mettono in risalto la presenza dell'effetto individuale dei soggetti: il soggetto numero 7, ad esempio, ha un'intonazione naturalmente più bassa rispetto agli altri soggetti.
+
+* Il livello di carico cognitivo (non?) sembra avere un effetto significativo a livello globale, nella forma di $f_0$ e nel livello di intensità.
+
+
+```{r plot_subj1, fig.cap="\\label{fig:subj1}Profili di $f_0$ per il soggetto S1, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
+plot_subject("S1")
+```
+
+
+```{r plot_subj2, fig.cap="\\label{fig:subj2}Profili di $f_0$ per il soggetto S2, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
+plot_subject("S2")
+```
+
+
+Dai grafici nelle Figure \ref{fig:subj1} e \ref{fig:subj2} confrontiamo dei profili di $f_0$ per due specifici soggetti, e possiamo osservare che:
+
+* L'effetto individuale, nei soggetti `S1` e `S2` rappresentati, si osserva vistosamente ad esempio per le combinazioni di sillabe `T1-T4`, `T4-T1` e `T4-T4`.
+
+* Osserviamo inoltre una naturale variazione delle curve all'interno dello stesso soggetto, dovute alle varie ripetizioni dell'esperimento.
+  L'effetto dovuto alle ripetizioni dell'esperimento sembra essere diverso a seconda del soggetto.In questo caso, il soggetto `S2` sembra avere profili con minore variabilità rispetto ai profili relativi al soggetto `S1`. 
+
+* Anche nel caso individuale, il carico cognitivo non sembra avere un'influenza apprezzabile sulla forma dei profili di $f_0$ per i due soggetti considerati.
+
+
+```{r plot_rep1, fig.cap="\\label{fig:rep1} Profili di $f_0$ per la ripetizione 1, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
 plot_repetition(1)
 ```
 
@@ -115,15 +135,17 @@ plot_repetition(1)
 ```{r plot_rep2, fig.cap="\\label{fig:rep2} Profili di $f_0$ per la ripetizione 2, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
 plot_repetition(2)
 ```
+
+
 ```{r plot_rep3, fig.cap="\\label{fig:rep3} Profili di $f_0$ per la ripetizione 3, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
 plot_repetition(3)
 ```
+
+
 ```{r plot_rep4, fig.cap="\\label{fig:rep4} Profili di $f_0$ per la ripetizione 4, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
 plot_repetition(4)
 ```
 
-Dai grafici \ref{fig:rep1}, \ref{fig:rep2}, \ref{fig:rep3} e \ref{fig:rep4} si focalizza l'attenzione sull'andamento dell'intonazione tra le varie ripetizioni mettendo in risalto la presenza dell'effetto individuale del soggetti: il soggetto numero 7, ad esempio, ha un'intonazione naturalmente più bassa rispetto agli altri soggetti.
 
-Inoltre, sembra esserci uno leggero abbassamento generale dei livelli di intonazioni dalla prima ripetizione alla quarta ripetizione.
+Sembra esserci uno leggero abbassamento generale dei livelli di intonazioni dalla prima ripetizione alla quarta ripetizione.
 
-Il livello cognitivo sembra avere un effetto significativo, in particolare confrontando i profili tra ripetizioni diverse.
