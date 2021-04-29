@@ -1,0 +1,99 @@
+---
+title: "Modellazione multilevel"
+author: "Daniele Zago"
+date: "2021-04-28"
+output: 
+    pdf_document:
+        dev: png
+        extra_dependencies: ["bm"]
+        df_print: kable
+        latex_engine: xelatex
+---
+
+```{r multilevel-base_setup, cache=FALSE, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE, engine.opts='-l', tidy=FALSE, fig.width=12, fig.height=8)
+knitr::knit_hooks$set(inline=function(x) prettyNum(round(x,2)))
+setwd("/home/dede/Documents/git/progetto-iterazione/models/")
+load("../data/mandarino.RData")
+```
+
+Aggiungo una variabile `current` che indica a quale sillaba (`syllable1` o `syllable2`) corrisponde la riga.
+
+```{r }
+mandarino$current = ifelse(mandarino$time <= 10, mandarino$syllable1, mandarino$syllable2)
+mandarino$current = levels(mandarino$syllable1)[mandarino$current]
+head(mandarino)
+```
+
+```{r libs, message=FALSE}
+library(rstanarm)
+library(bayesplot)
+library(tidybayes)
+library(ggplot2)
+library(magrittr)
+library(lme4)
+library(dplyr)
+```
+
+
+
+Dalle considerazioni effettuate nell'analisi esplorativa, definisco inizialmente un modello che tenga conto di:
+
+* Effetto globale del carico cognitivo: $\beta_\text{cog} \cdot x_\text{cog}$
+
+* Effetto medio del tempo: $\beta_t \cdot t$
+
+* Effetto medio della sillaba che si sta pronunciando: $\beta_\text{cur} x_\text{cur}$
+
+* Diverso andamento medio nel tempo in base alla sillaba che si sta pronunciando: $\beta_{t, cur_i} t\cdot  x_{cur_i}$
+
+* Effetto medio della prima e ultima sillaba: $\beta_\text{s1} x_\text{s1}, \beta_\text{s2} x_\text{s2}$
+  
+* Effetto medio della combinazione di prima e ultima sillaba: $\beta_{\text{s1s2}} x_\text{s1}\cdot x_\text{s2}$
+
+* Effetto casuale dei soggetti e delle ripetizioni: $\alpha_{(j)} + \alpha_{\text{cur}(j)} + \alpha_{\text{s1}(j)} +  \alpha_{\text{s2}(j)} +\alpha_{\text{rep}(j)}$
+
+
+```{r lme4_fit}
+if(file.exists("fitLmer.Rdata")){
+    load("fitLmer.Rdata")
+} else{
+    fit = lmer(f0 ~ cog_load + time + current + time:current + syllable1 + syllable2 +
+               syllable1:syllable2 + (1 + current + syllable1+syllable2 + repetition|subject),
+           control = lmerControl(optimizer = "bobyqa"),
+           data = mandarino,
+           verbose = 2)
+    save(fit, file="fitLmer.Rdata")
+}
+```
+
+
+```{r lme4_plot}
+ppc_subject = function(subj, datiPred){
+    # Plot frequency profiles (f_0) for an individual subject with predictions
+    #
+    # @param subj: string containing subject identifier, e.g. "S10"
+    # @param datiPred: dataset with an additional `ypred` column
+    #
+    # @return ggplot2 object, plot with average effect over different repetitions
+
+    if(!subj %in% levels(datiPred$subject)) stop("Subject not found")
+    
+    datiPred %>%
+        subset(subject == subj) %>%
+        ggplot(aes(time))+
+        geom_line(aes(y = f0, group = repetition, color = factor(repetition)), alpha=0.45) + 
+        geom_line(aes(y = ypred, group = repetition), color = "darkblue") + 
+        facet_grid(cog_load ~  syllable1*syllable2)
+}
+```
+
+```{r lme4_pred}
+ypred = predict(fit)
+datiPred = cbind(mandarino, ypred)
+
+ppc_subject("S1", datiPred)
+ppc_subject("S2", datiPred)
+ppc_subject("S3", datiPred)
+ppc_subject("S4", datiPred)
+```
