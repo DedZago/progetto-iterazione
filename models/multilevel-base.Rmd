@@ -17,14 +17,6 @@ setwd("/home/dede/Documents/git/progetto-iterazione/models/")
 load("../data/mandarino.RData")
 ```
 
-Aggiungo una variabile `current` che indica a quale sillaba (`syllable1` o `syllable2`) corrisponde la riga.
-
-```{r }
-mandarino$current = ifelse(mandarino$time <= 10, mandarino$syllable1, mandarino$syllable2)
-mandarino$current = levels(mandarino$syllable1)[mandarino$current]
-head(mandarino)
-```
-
 ```{r libs, message=FALSE}
 library(rstanarm)
 library(bayesplot)
@@ -33,11 +25,87 @@ library(ggplot2)
 library(magrittr)
 library(lme4)
 library(dplyr)
+library(gtools)
 ```
 
+# Preprocessing #
 
+* Aggiungo una variabile `current` che indica a quale sillaba (`syllable1` o `syllable2`) corrisponde la riga dell'osservazione.
+```{r }
+mandarino$current = ifelse(mandarino$time <= 10, mandarino$syllable1, mandarino$syllable2)
+mandarino$current = levels(mandarino$syllable1)[mandarino$current]
+```
 
-Dalle considerazioni effettuate nell'analisi esplorativa, definisco inizialmente un modello che tenga conto di:
+* Lavoriamo con la media delle quattro ripetizioni per ciascun soggetto.
+
+```{r }
+mandarino %>%
+    group_by_at(setdiff(colnames(mandarino), c("repetition", "f0"))) %>%
+    summarize(f0 = mean(f0)) %>%
+    ungroup() -> mandarino
+```
+
+Il dataset consiste delle seguenti variabili:
+
+```{r }
+head(mandarino)
+```
+
+```{r pred_plot, echo=FALSE}
+# --------------------------------------------
+# Funzioni per fare i grafici delle previsioni
+# --------------------------------------------
+ppc_subject = function(subj, dati, ypred, ci.low = NULL, ci.upper = NULL){
+    # Plot frequency profiles (f_0) for an individual subject with predictions
+    #
+    # @param subj: string containing subject identifier, e.g. "S10"
+    # @param datiPred: dataset with an additional `ypred` column
+    #
+    # @return ggplot2 object, plot with average effect over different repetitions
+
+    if(!subj %in% levels(dati$subject)) stop("Subject not found")
+
+    datiPred = cbind(dati, "ypred" = ypred)
+    if(!is.null(ci.low) & !is.null(ci.upper)){
+        datiPred = cbind(datiPred, "ci.low" = ci.low, "ci.upper" = ci.upper)
+        datiPred %>%
+            subset(subject == subj) %>%
+            ggplot(aes(time))+
+            geom_line(aes(y = f0), alpha=0.45) + 
+            geom_line(aes(y = ypred), color = "darkblue") + 
+            geom_ribbon(aes(ymin = ci.low, ymax = ci.upper), alpha=0.2) +
+            facet_grid(cog_load ~  syllable1*syllable2)
+    } else{
+        datiPred %>%
+            subset(subject == subj) %>%
+            ggplot(aes(time))+
+            geom_line(aes(y = f0), alpha=0.45) + 
+            geom_line(aes(y = ypred), color = "darkblue") + 
+            facet_grid(cog_load ~  syllable1*syllable2)
+    }
+}
+
+ppc_full = function(dati, ypred){
+    # Plot frequency profiles (f_0) for an individual subject with predictions
+    #
+    # @param subj: string containing subject identifier, e.g. "S10"
+    # @param datiPred: dataset with an additional `ypred` column
+    #
+    # @return ggplot2 object, plot with average effect over different repetitions
+
+    datiPred = cbind(dati, "ypred" = ypred)
+    datiPred$subject = factor(datiPred$subject,
+                               levels = mixedsort(levels(datiPred$subject)))
+
+    datiPred %>%
+        ggplot(aes(time))+
+        geom_line(aes(y = f0, group = subject, color = subject), alpha=0.8, linetype = 3) + 
+        geom_line(aes(y = ypred, group = subject, color = subject)) + 
+        facet_grid(cog_load ~  syllable1*syllable2)
+}
+```
+
+Proviamo alcuni modelli con effetti casuali, come baseline di riferimento:
 
 * Effetto globale del carico cognitivo: $\beta_\text{cog} \cdot x_\text{cog}$
 
@@ -54,46 +122,104 @@ Dalle considerazioni effettuate nell'analisi esplorativa, definisco inizialmente
 * Effetto casuale dei soggetti e delle ripetizioni: $\alpha_{(j)} + \alpha_{\text{cur}(j)} + \alpha_{\text{s1}(j)} +  \alpha_{\text{s2}(j)} +\alpha_{\text{rep}(j)}$
 
 
+## Modello lineare con effetti misti (lme4) ##
+
 ```{r lme4_fit}
 if(file.exists("fitLmer.Rdata")){
     load("fitLmer.Rdata")
 } else{
-    fit = lmer(f0 ~ cog_load + time + current + time:current + syllable1 + syllable2 +
-               syllable1:syllable2 + (1 + current + syllable1+syllable2 + repetition|subject),
-           control = lmerControl(optimizer = "bobyqa"),
-           data = mandarino,
-           verbose = 2)
-    save(fit, file="fitLmer.Rdata")
-}
-```
-
-
-```{r lme4_plot}
-ppc_subject = function(subj, datiPred){
-    # Plot frequency profiles (f_0) for an individual subject with predictions
-    #
-    # @param subj: string containing subject identifier, e.g. "S10"
-    # @param datiPred: dataset with an additional `ypred` column
-    #
-    # @return ggplot2 object, plot with average effect over different repetitions
-
-    if(!subj %in% levels(datiPred$subject)) stop("Subject not found")
-    
-    datiPred %>%
-        subset(subject == subj) %>%
-        ggplot(aes(time))+
-        geom_line(aes(y = f0, group = repetition, color = factor(repetition)), alpha=0.45) + 
-        geom_line(aes(y = ypred, group = repetition), color = "darkblue") + 
-        facet_grid(cog_load ~  syllable1*syllable2)
+    fitLmer = lmer(f0 ~ cog_load + time + current + time:current + syllable1 + syllable2 +
+                   syllable1:syllable2 + time:syllable1 + time:syllable2 +
+                   (1 + time + time:syllable1 + time:syllable2 + time:current|subject),
+               data = mandarino,
+               verbose = 2)
+    save(fitLmer, file="fitLmer.Rdata")
 }
 ```
 
 ```{r lme4_pred}
-ypred = predict(fit)
-datiPred = cbind(mandarino, ypred)
+ypred = predict(fitLmer)
+ppc_subject("S1", mandarino, ypred)
+ppc_subject("S2", mandarino, ypred)
+ppc_subject("S3", mandarino, ypred)
+ppc_subject("S4", mandarino, ypred)
 
-ppc_subject("S1", datiPred)
-ppc_subject("S2", datiPred)
-ppc_subject("S3", datiPred)
-ppc_subject("S4", datiPred)
+ppc_full(mandarino, ypred)
+```
+
+## Modello lineare con effetti misti (Stan) ##
+
+```{r stan_lme_fit}
+# Aggiungo tempo^2 chiamandolo time2
+datasq = cbind(mandarino, time2 = mandarino$time^2)
+
+if(file.exists("fitStanLmer.Rdata")){
+    load("fitStanLmer.Rdata")
+} else{
+    fitStanLmer = stan_glmer(f0 ~ cog_load + time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 +
+                             (1 + time:syllable1 + time:syllable2 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE)
+    save(fitStanLmer, file="fitStanLmer.Rdata")
+}
+```
+```{r stan_lme_pred}
+ypredStanLmer = posterior_predict(fitStanLmer, draws = 100)
+ypred = apply(ypredStanLmer, 2, mean)
+stdev = apply(ypredStanLmer, 2, sd)
+lmin = ypred - qnorm(1 - 0.05/2) * stdev
+lmax = ypred + qnorm(1 - 0.05/2) * stdev
+
+ppc_subject("S1", mandarino, ypred, lmin, lmax)
+ppc_subject("S2", mandarino, ypred, lmin, lmax)
+ppc_subject("S3", mandarino, ypred, lmin, lmax)
+ppc_subject("S4", mandarino, ypred, lmin, lmax)
+
+ppc_full(mandarino, ypred)
+```
+
+## GAM con effetti misti ##
+
+Provo ad utilizzare un modello GAM con smoothing sulla variabile tempo, assieme ad intercetta e interazioni `time, time:syllable1, time:syllable2, time:current`,  specifiche per soggetto.
+
+```{r gamm4_fit}
+library(gamm4)
+if(file.exists("fitgamm4.Rdata")){
+    load("fitgamm4.Rdata")
+} else{
+    # Stima con gamm4
+    fitGamm4 = gamm4(f0 ~ cog_load + s(time) + current + time:current + syllable1 + syllable2 +
+                     syllable1:syllable2 + time:syllable1 + time:syllable2,
+                      random = ~ (1 + time + time:syllable1 + time:syllable2 + time:current|subject),
+                 data = mandarino,
+                 control = lmerControl(optimizer = "optimx", calc.derivs = FALSE,
+                                       optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)),
+                 verbose = 2)
+
+    # Equivalente di gamm4 con Stan
+    fitGamm4 = stan_gamm4(f0 ~ cog_load + s(time) + current + time:current + syllable1 +
+                          syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2,
+                      random = ~ (1 + time:syllable1 + time:syllable2 + time:current|subject),
+                      data = mandarino,
+                      algorithm = "meanfield")
+    save(fitGamm4, file="fitgamm4.Rdata")
+}
+```
+
+```{r gamm4_pred}
+# Predict per il modello con Stan oppure con gamm4
+if("stanreg" %in% class(fitGamm4)){
+    ypredGamm4 = posterior_predict(fitGamm4, draws = 100)
+    ypred = apply(ypredGamm4, 2, mean)
+
+} else{
+    ypred = predict(fitGamm4)
+}
+ppc_subject("S1", mandarino, ypred)
+ppc_subject("S2", mandarino, ypred)
+ppc_subject("S3", mandarino, ypred)
+ppc_subject("S4", mandarino, ypred)
+
+ppc_full(mandarino, ypred)
 ```
