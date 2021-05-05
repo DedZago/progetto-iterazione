@@ -21,51 +21,56 @@ Applico una decomposizione a valori singolari funzionale per dati multilevel
 
 ```{r data}
 load("../data/mandarino.RData")
+load("../data/mandarino-proc.RData")
 library(refund)
 library(tidyverse)
-# Reshape dati formato largo
+
+# Reshape dei dati in formato largo per le fPCA
+mandarino = mandarino[ , -6 ]
 mandarino_wide = spread(mandarino, time, "f0")
-subj = as.numeric(mandarino_wide$subject)
-repet = mandarino_wide$repetition
-Y = as.matrix(mandarino_wide[ , 6:(NCOL(mandarino_wide)) ])
+
+subj = as.numeric(mandarino_wide$subject)                       # Indicatore soggetti
+Y = as.matrix(mandarino_wide[ , 5:(NCOL(mandarino_wide)) ])     # Funzioni osservate
 
 if(file.exists("fpca.Rdata")){
-    load(file="fpca.Rdata")
+    load("fpca.Rdata")
 } else{
-    fpca = mfpca.sc(Y, id = subj, twoway = TRUE, pve = 0.999)
+    fpca = mfpca.sc(Y, id = subj, twoway = TRUE, pve = 0.99)
+    save(fpca, file="fpca.Rdata")
 }
 
-fpca$Yhat
-
-par(mfrow = c(2,1))
-matplot(t(Y), type = "l")
-matplot(t(fpca$Yhat), type = "l")
-matplot(t(fpca$Yhat.subject[1:20, ]), type = "l")
-
-par(mfrow = c(1,1))
+{
+    par(mfrow = c(2,1))
+    matplot(t(Y), type = "l")               # Plot delle funzioni osservate
+    matplot(t(fpca$Yhat), type = "l")       # Plot delle funzioni ricostruite con fPCA
+    par(mfrow = c(1,1))
+}
 ```
 
 ```{r fpca}
-fpca$scores         # pesi per ciascuna componente principale funzionale
-fpca$scores$level1  # pesi componenti soggettive
-fpca$scores$level2  # pesi componenti globali
+fpca$npc            # numero componenti principali, level1: subject, level2: global
+fpca$scores$level1  # pesi componenti principali soggettive
+fpca$scores$level2  # pesi componenti principali globali
 fpca$mu             # media globale
 fpca$efunctions     # autofunzioni
 fpca$evalues        # autovalori
-fpca$npc            # numero componenti principali, level1: subject, level2: global
 fpca$sigma2         # errore di misurazione
-fpca$eta            # shift dalla media
+fpca$eta            # shift dalla media per ogni soggetto
 ```
 
-```{r }
-scores1 = fpca$scores$level1
-efun1 = fpca$efunctions$level1
-scores2 = fpca$scores$level2
-efun2 = fpca$efunctions$level2
-eta2 = fpca$eta[ , 1]
+```{r fitScores}
+library(glmnetUtils)
 
-subjPred = scores1 %*% t(efun1)
-globalPred = scores2 %*% t(efun2)
-plot(1:20, fpca$mu + subjPred[1, ] + globalPred[1, ] + eta2, type = "l")
-plot(1:20, Y[1 ,] , type = "l")
+# Provo un modello lineare sugli scores delle eigenfunctions globali
+fit = lm(scores2[ , 1 ] ~ cog_load + syllable1 + syllable2 + syllable1:syllable2, data = mandarino_wide)
+
+# Siccome sono tanti parametri (6 funzioni * 17 covariate) uso elastic-net
+X = model.matrix(scores2[ , 1 ] ~ cog_load + syllable1 + syllable2 + syllable1:syllable2, data = mandarino_wide)[ , -1 ]
+
+# fitScores[[i]]: glmnet sugli scores della i-esima eigenfunction
+fitScores = vector(mode = "list", length = NCOL(scores2))
+for(i in 1:NCOL(scores2)){
+    fitScores[[i]] = cv.glmnet(X, scores2[ , i ], alpha = 0.5) 
+}
+lapply(fitScores, coef)
 ```
