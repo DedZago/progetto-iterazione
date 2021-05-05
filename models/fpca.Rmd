@@ -1,0 +1,71 @@
+---
+title: "Multilevel Functional PCA"
+author: "Daniele Zago"
+date: "2021-05-05"
+output: 
+    pdf_document:
+        dev: png
+        extra_dependencies: ["bm"]
+        df_print: kable
+        latex_engine: xelatex
+---
+
+```{r fpca_setup, cache=FALSE, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE, engine.opts='-l', tidy=FALSE, fig.width=12, fig.height=8)
+knitr::knit_hooks$set(inline=function(x) prettyNum(round(x,2)))
+setwd("~/Documents/git/progetto-iterazione/models")
+```
+
+# FPCA multilevel #
+Applico una decomposizione a valori singolari funzionale per dati multilevel
+
+```{r data}
+load("../data/mandarino.RData")
+library(refund)
+library(tidyverse)
+# Reshape dati formato largo
+mandarino_wide = spread(mandarino, time, "f0")
+subj = as.numeric(mandarino_wide$subject)
+repet = mandarino_wide$repetition
+Y = as.matrix(mandarino_wide[ , 6:(NCOL(mandarino_wide)) ])
+
+if(file.exists("fpca.Rdata")){
+    save(fpca, file="fpca.Rdata")
+} else{
+    fpca = mfpca.sc(Y, id = subj, twoway = TRUE, pve = 0.999)
+}
+
+fpca$Yhat
+
+par(mfrow = c(2,1))
+matplot(t(Y), type = "l")
+matplot(t(fpca$Yhat), type = "l")
+matplot(t(fpca$Yhat.subject[1:20, ]), type = "l")
+
+par(mfrow = c(1,1))
+```
+
+```{r fpca}
+fpca$scores         # pesi per ciascuna componente principale funzionale
+fpca$scores$level1  # pesi componenti soggettive
+fpca$scores$level2  # pesi componenti globali
+fpca$mu             # media globale
+fpca$efunctions     # autofunzioni
+fpca$evalues        # autovalori
+fpca$npc            # numero componenti principali, level1: subject, level2: global
+fpca$sigma2         # errore di misurazione
+fpca$eta            # shift dalla media
+```
+
+```{r }
+scores1 = fpca$scores$level1
+efun1 = fpca$efunctions$level1
+scores2 = fpca$scores$level2
+efun2 = fpca$efunctions$level2
+eta2 = fpca$eta[ , 1]
+
+subjPred = scores1 %*% t(efun1)
+globalPred = scores2 %*% t(efun2)
+plot(1:20, fpca$mu + subjPred[1, ] + globalPred[1, ] + eta2, type = "l")
+plot(1:20, Y[1 ,] , type = "l")
+```
