@@ -30,7 +30,7 @@ repet = mandarino_wide$repetition
 Y = as.matrix(mandarino_wide[ , 6:(NCOL(mandarino_wide)) ])
 
 if(file.exists("fpca.Rdata")){
-    save(fpca, file="fpca.Rdata")
+    load(file="fpca.Rdata")
 } else{
     fpca = mfpca.sc(Y, id = subj, twoway = TRUE, pve = 0.999)
 }
