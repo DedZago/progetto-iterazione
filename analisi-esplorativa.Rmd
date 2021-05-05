@@ -30,7 +30,7 @@ Tuttavia, per alcuni soggetti mancano alcune ripetizioni dell'esperimento per mo
 
 
 ```{r }
-table(mandarino$subject, mandarino$repetition, mandarino$cog_load)/20
+temp = table(mandarino$subject, mandarino$cog_load)/20
 ```
 
 Ci interessa $f_0$ in funzione di quello che deve dire (`syllable0` e `syllable1`).
