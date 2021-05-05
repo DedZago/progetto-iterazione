@@ -135,6 +135,7 @@ if(file.exists("fitLmer.Rdata")){
                verbose = 2)
     save(fitLmer, file="fitLmer.Rdata")
 }
+load("/Users/brosolo/Documents/GitHub/progetto-iterazione/models/brofacose_lmer_gamm4/fitLmer.Rdata")
 ```
 
 ```{r lme4_pred}
@@ -146,6 +147,36 @@ ppc_subject("S4", mandarino, ypred)
 
 ppc_full(mandarino, ypred)
 ```
+
+```{r lme4_fit time2}
+datasq = cbind(mandarino, time2 = mandarino$time^2)
+fitLmer2 = lmer(f0 ~ cog_load + time + time2 + current + time:current + time2:current + syllable1                  + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 +
+                   (1 + time + time:syllable1 + time:syllable2 + time:current|subject),
+               data = datasq,
+               verbose = 2)
+
+ypred2 = predict(fitLmer2)
+ppc_subject("S1", mandarino, ypred2)
+ppc_subject("S2", mandarino, ypred2)
+ppc_subject("S3", mandarino, ypred2)
+ppc_subject("S4", mandarino, ypred2)
+```
+
+```{r lme4_fit time2}
+datacubed = cbind(datasq, time3 = mandarino$time^3)
+fitLmer3 = lmer(f0 ~ cog_load + time + time2 + time3 + current + time:current + time2:current +                   time3:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 +                    time:syllable2 +
+                   (1 + time + time:syllable1 + time:syllable2 + time:current|subject),
+               data = datacubed,
+               verbose = 2)
+ypred3 = predict(fitLmer3)
+ppc_subject("S1", mandarino, ypred3)
+ppc_subject("S2", mandarino, ypred3)
+ppc_subject("S3", mandarino, ypred3)
+ppc_subject("S4", mandarino, ypred3)
+```
+
+
+
 
 ## Modello lineare con effetti misti (Stan) ##
 

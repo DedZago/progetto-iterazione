@@ -134,6 +134,7 @@ fitGamm44 = gamm4(f0 ~ cog_load + s(time) + s(time2) + s(time3) + current + time
                                         optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)),
                   verbose = 2)
 summary(fitGamm44)
+load("/Users/brosolo/Documents/GitHub/progetto-iterazione/models/brofacose_lmer_gamm4/fitGamm44.Rdata")
 ypredGamm44 <- predict(fitGamm44$mer)
 MSE_Gamm44 <- mean((ypredGamm44 - mandarino$f0)^2)
 MSE_Gamm44
