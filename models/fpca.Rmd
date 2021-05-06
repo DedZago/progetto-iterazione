@@ -16,61 +16,134 @@ knitr::knit_hooks$set(inline=function(x) prettyNum(round(x,2)))
 setwd("~/Documents/git/progetto-iterazione/models")
 ```
 
-# FPCA multilevel #
-Applico una decomposizione a valori singolari funzionale per dati multilevel
-
-```{r data}
-load("../data/mandarino.RData")
+```{r fpca_data}
 load("../data/mandarino-proc.RData")
-library(refund)
-library(tidyverse)
-
-# Reshape dei dati in formato largo per le fPCA
 mandarino = mandarino[ , -6 ]
 mandarino_wide = spread(mandarino, time, "f0")
-
-subj = as.numeric(mandarino_wide$subject)                       # Indicatore soggetti
 Y = as.matrix(mandarino_wide[ , 5:(NCOL(mandarino_wide)) ])     # Funzioni osservate
+```
 
-if(file.exists("fpca.Rdata")){
-    load("fpca.Rdata")
-} else{
-    fpca = mfpca.sc(Y, id = subj, twoway = TRUE, pve = 0.99)
-    save(fpca, file="fpca.Rdata")
-}
+# Analisi con componenti principali funzionali (fPCA)#
 
+Stima delle funzioni principali che spieghino il 95\% della varianza funzionale:
+
+```{r fpca_base}
+library(fdapace)
+
+Y_list = lapply(seq_len(NROW(Y)), function(i) Y[i,])
+t_list = lapply(seq_len(NROW(Y)), function(i) 1:20)
+
+fpcaBase = FPCA(Ly = Y_list, Lt = t_list, optns = list(FVEthreshold = 0.95))
+plot(fpcaBase)
+K = fpcaBase$selectK                # Selected number of fPC
+
+matplot(fpcaBase$phi, type = "l")
+legend("topleft", legend=paste0("fPC ", 1:K), col=1:K,cex=0.8, fill=1:K)
+
+```
+
+Confronto tra dati originali e dati ricostruiti con le prime `r print(K)` componenti principali stimate:
+
+```{r fpca_plot}
+ypred = predict(fpcaBase, Y_list, t_list)
 {
     par(mfrow = c(2,1))
-    matplot(t(Y), type = "l")               # Plot delle funzioni osservate
-    matplot(t(fpca$Yhat), type = "l")       # Plot delle funzioni ricostruite con fPCA
+    matplot(t(Y), type = "l")
+    matplot(t(ypred$predCurves), type = "l")
     par(mfrow = c(1,1))
 }
 ```
 
-```{r fpca}
-fpca$npc            # numero componenti principali, level1: subject, level2: global
-fpca$scores$level1  # pesi componenti principali soggettive
-fpca$scores$level2  # pesi componenti principali globali
-fpca$mu             # media globale
-fpca$efunctions     # autofunzioni
-fpca$evalues        # autovalori
-fpca$sigma2         # errore di misurazione
-fpca$eta            # shift dalla media per ogni soggetto
+```{r fpca_test_equal}
+# Verifico che le componenti principali sono stimate come mu + eigenfunctions %*% t(score)
+scoresFPCA = fpcaBase$xiEst                              # Scores for each observation
+eigenFPCA = fpcaBase$phi                                 # Estimated eigenfunctions
+predY = fpcaBase$mu + eigenFPCA %*% t(scoresFPCA)        # Y stimata a mano
+
+{
+    par(mfrow = c(2,1))
+    matplot(t(ypred$predCurves), type = "l")
+    matplot(predY, type = "l")
+    par(mfrow = c(1,1))
+}
 ```
 
-```{r fitScores}
-library(glmnetUtils)
+```{r fpca_pred}
+predFPCA = function(fpca, predictedScores){
+    # Funzione che calcola le Y previste sulla base degli scores ottenuti da un modello
+	#
+    # @param fpca, risultato di una chiamata alla funzione FPCA
+    # @param predictedScores scores previsti, matrice n x K
+	#
+    # @return matrice 20 x n contenente su ogni colonna la funzione Y prevista
 
-# Provo un modello lineare sugli scores delle eigenfunctions globali
-fit = lm(scores2[ , 1 ] ~ cog_load + syllable1 + syllable2 + syllable1:syllable2, data = mandarino_wide)
-
-# Siccome sono tanti parametri (6 funzioni * 17 covariate) uso elastic-net
-X = model.matrix(scores2[ , 1 ] ~ cog_load + syllable1 + syllable2 + syllable1:syllable2, data = mandarino_wide)[ , -1 ]
-
-# fitScores[[i]]: glmnet sugli scores della i-esima eigenfunction
-fitScores = vector(mode = "list", length = NCOL(scores2))
-for(i in 1:NCOL(scores2)){
-    fitScores[[i]] = cv.glmnet(X, scores2[ , i ], alpha = 0.5) 
+    eigenFun = fpca$phi
+    mu       = fpca$mu
+    predY = mu + eigenFun %*% t(predictedScores)
+    return(predY)
 }
-lapply(fitScores, coef)
+
+```
+
+## Modello lineare multivariato sulle fPC ##
+Tutti effetti fissi
+```{r fpca_lm}
+fitScoresBase = vector(mode = "list", length = K)
+for(i in 1:K){
+    fitScoresBase[[i]] = lm(scoresFPCA[ , i ] ~ cog_load + syllable1 + syllable2 + subject + syllable1:syllable2, data = mandarino_wide)
+}
+lapply(fitScoresBase, summary)
+```
+
+## Modello lineare multivariato con penalizzazione elastic-net ##
+
+```{r fpca_glmnet}
+library(glmnet)
+X = model.matrix(scoresFPCA[ , 1 ] ~ subject + cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2, data = mandarino_wide)[ , -1 ]
+mgausGlmnet = cv.glmnet(X, scoresFPCA, family = "mgaussian")
+plot(mgausGlmnet)
+coef(mgausGlmnet)
+
+# Confronto osservate con previste
+predScores  = predict(mgausGlmnet, newx = X)[ , , 1]
+predYglmnet = predFPCA(fpcaBase, predScores)
+{
+    par(mfrow = c(2,1))
+    matplot(predY, type = "l")
+    matplot(predYglmnet, type = "l")
+    par(mfrow = c(1,1))
+}
+```
+
+## Modello multivariato ad effetti casuali con Stan ##
+
+```{r fpca_lmmStan}
+library(rstanarm)
+library(bayesplot)
+cores = parallel::detectCores()
+set.seed(123)
+
+# Preparo i dati per Stan
+data_stan = cbind(mandarino_wide[ , 1:4], "scores" = scoresFPCA)
+# Stima del modello
+fitStan = stan_mvmer(
+                     formula = list(
+                                    scores.1 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1|subject),
+                                    scores.2 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1|subject),
+                                    scores.3 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1|subject)
+                                    ),
+                     data = data_stan,
+                     chains = min(4, cores),
+                     cores = min(4, cores)
+)
+
+summary(fitStan)
+
+scoresPred1 = posterior_predict(fitStan, draws = 50, m = 1)
+scoresPred2 = posterior_predict(fitStan, draws = 50, m = 2)
+scoresPred3 = posterior_predict(fitStan, draws = 50, m = 3)
+
+ppc_dens_overlay_grouped(data_stan$scores.1, scoresPred1, group = data_stan$subject)
+ppc_dens_overlay_grouped(data_stan$scores.2, scoresPred2, group = data_stan$subject)
+ppc_dens_overlay_grouped(data_stan$scores.3, scoresPred3, group = data_stan$subject)
 ```
