@@ -17,6 +17,7 @@ setwd("~/Documents/git/progetto-iterazione/models")
 ```
 
 ```{r fpca_data}
+library(tidyverse)
 load("../data/mandarino-proc.RData")
 mandarino = mandarino[ , -6 ]
 mandarino_wide = spread(mandarino, time, "f0")
@@ -41,6 +42,7 @@ matplot(fpcaBase$phi, type = "l")
 legend("topleft", legend=paste0("fPC ", 1:K), col=1:K,cex=0.8, fill=1:K)
 
 ```
+
 
 Confronto tra dati originali e dati ricostruiti con le prime `r print(K)` componenti principali stimate:
 
@@ -120,7 +122,8 @@ predYglmnet = predFPCA(fpcaBase, predScores)
 ```{r fpca_lmmStan}
 library(rstanarm)
 library(bayesplot)
-cores = parallel::detectCores()
+cores  = min(4, parallel::detectCores())
+chains = min(4, parallel::detectCores())
 set.seed(123)
 
 # Preparo i dati per Stan
@@ -128,22 +131,36 @@ data_stan = cbind(mandarino_wide[ , 1:4], "scores" = scoresFPCA)
 # Stima del modello
 fitStan = stan_mvmer(
                      formula = list(
-                                    scores.1 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1|subject),
-                                    scores.2 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1|subject),
-                                    scores.3 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1|subject)
+                                    scores.1 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.2 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.3 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject)
                                     ),
                      data = data_stan,
-                     chains = min(4, cores),
-                     cores = min(4, cores)
+                     cores = cores,
+                     chains = chains
 )
-
+save(fitStan, file="fitStan.Rdata")
 summary(fitStan)
 
 scoresPred1 = posterior_predict(fitStan, draws = 50, m = 1)
-scoresPred2 = posterior_predict(fitStan, draws = 50, m = 2)
-scoresPred3 = posterior_predict(fitStan, draws = 50, m = 3)
-
 ppc_dens_overlay_grouped(data_stan$scores.1, scoresPred1, group = data_stan$subject)
+
+scoresPred2 = posterior_predict(fitStan, draws = 50, m = 2)
 ppc_dens_overlay_grouped(data_stan$scores.2, scoresPred2, group = data_stan$subject)
+
+scoresPred3 = posterior_predict(fitStan, draws = 50, m = 3)
 ppc_dens_overlay_grouped(data_stan$scores.3, scoresPred3, group = data_stan$subject)
+
 ```
+
+
+TODO:
+
+* Selezione degli effetti fissi usando la loocv, si possono togliere effetti fissi da una, due o tutte le var risposta (scores). Il cog_load sembra la più promettente da rimuovere senza perdere troppa flessibilità del modello.
+  Per confrontare i due modelli, usare `loo` e `loo_compare` e vedere se la differenza tra i criteri di informazione è "significativamente" più grande dello standard error.
+  Occhio a guardare i warnings dei valori di $K$ di Pareto, che non ce ne siano di troppo brutti. In caso è meglio mettere un threshold come dice il warning. 
+
+* Tirare fuori la posteriori dei beta sillabe globali e di interazione, simulare scores al variare delle combinazioni e guardare le funzioni $Y$ risultanti dalla somma delle componenti principali previste.
+  Questo ci (dovrebbe) dare un'indicazione degli effetti di anticipazione / trascinamento / mediazione delle sillabe.
+
+* Eventualmente provare cose più complesse perché come al solito arriva Gelman e ci smonta tutto [link](https://discourse.mc-stan.org/t/stan-glmer-marginal-effects/14234/4)
