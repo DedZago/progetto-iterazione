@@ -153,6 +153,88 @@ ppc_dens_overlay_grouped(data_stan$scores.3, scoresPred3, group = data_stan$subj
 
 ```
 
+```{r selezione effetti fissi}
+#tutti gli effetti fissi
+fitStan1 = stan_mvmer(
+                     formula = list(
+                                    scores.1 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.2 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.3 ~ cog_load + cog_load:syllable1 + cog_load:syllable2 + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject)
+                                    ),
+                     data = data_stan, 
+                     cores = cores,
+                     chains = chains
+)
+summary(fitStan1)
+save(fitStan1, file="fitStan1.Rdata")
+
+loo1 <- loo(fitStan1, cores = cores) #warnings
+#k1 <- kfold(fitStan1, K = 10, cores = cores) NOPE
+loo1$estimates
+
+#provo a rimuovere le interazioni di cog_load e le sillabe da tutte e 3 le componenti
+fitStan2 = stan_mvmer(
+                     formula = list(
+                                    scores.1 ~ cog_load + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.2 ~ cog_load + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.3 ~ cog_load + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject)
+                                    ),
+                     data = data_stan, 
+                     cores = cores,
+                     chains = chains
+)
+summary(fitStan2)
+save(fitStan2, file="fitStan2.Rdata")
+
+loo2 <- loo(fitStan2, cores = cores) #warnings
+loo2$estimates
+cbind(loo1$looic - loo2$looic, loo1$se_looic, loo2$se_looic)
+#looic migliora ma non in modo significativo
+loo_compare(loo1, loo2)
+
+
+#provo a rimuovere cog_load
+fitStan4 = stan_mvmer(
+                     formula = list(
+                                    scores.1 ~ syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.2 ~ syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.3 ~ syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject)
+                                    ),
+                     data = data_stan, 
+                     cores = cores,
+                     chains = chains
+)
+summary(fitStan4)
+save(fitStan4, file="fitStan4.Rdata")
+
+loo4 <- loo(fitStan4, cores = cores)
+loo4$estimates
+cbind(loo1$looic - loo4$looic, loo1$se_looic, loo4$se_looic)
+loo_compare(loo1, loo2, loo4)
+
+#provo a rimuovere interazione tra sillabe nella seconda componente
+fitStan5 = stan_mvmer(
+                     formula = list(
+                                    scores.1 ~ syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.2 ~ syllable1 + syllable2 + (1 + syllable1 + syllable2 |subject),
+                                    scores.3 ~ syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject)
+                                    ),
+                     data = data_stan, 
+                     cores = cores,
+                     chains = chains
+)
+summary(fitStan5)
+save(fitStan5, file="fitStan5.Rdata")
+
+loo5 <- loo(fitStan5, cores = cores)
+loo5$estimates
+cbind(loo1$looic - loo5$looic, loo1$se_looic, loo5$se_looic)
+#looic peggiora ma di poco
+loo_compare(loo1, loo2, loo4, loo5)
+
+#Il migliore è quello senza cog_load (fitStan4) ma le differenza tra i modelli non sono molto grandi.
+```
+
 
 TODO:
 
