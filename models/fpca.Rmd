@@ -233,6 +233,20 @@ cbind(loo1$looic - loo5$looic, loo1$se_looic, loo5$se_looic)
 loo_compare(loo1, loo2, loo4, loo5)
 
 #Il migliore è quello senza cog_load (fitStan4) ma le differenza tra i modelli non sono molto grandi.
+
+scoresPred1.4 = posterior_predict(fitStan4, draws = 50, m = 1)
+ppc_dens_overlay_grouped(data_stan$scores.1, scoresPred1.4, group = data_stan$subject)
+scoresPred2.4 = posterior_predict(fitStan4, draws = 50, m = 2)
+ppc_dens_overlay_grouped(data_stan$scores.2, scoresPred2.4, group = data_stan$subject)
+scoresPred3.4 = posterior_predict(fitStan4, draws = 50, m = 3)
+ppc_dens_overlay_grouped(data_stan$scores.3, scoresPred3.4, group = data_stan$subject)
+
+scoresPred1.5 = posterior_predict(fitStan5, draws = 50, m = 1)
+ppc_dens_overlay_grouped(data_stan$scores.1, scoresPred1.5, group = data_stan$subject)
+scoresPred2.5 = posterior_predict(fitStan5, draws = 50, m = 2)
+ppc_dens_overlay_grouped(data_stan$scores.2, scoresPred2.5, group = data_stan$subject)
+scoresPred3.5 = posterior_predict(fitStan5, draws = 50, m = 3)
+ppc_dens_overlay_grouped(data_stan$scores.3, scoresPred3.5, group = data_stan$subject)
 ```
 
 
