@@ -18,6 +18,7 @@ setwd("~/Documents/git/progetto-iterazione/models")
 
 ```{r fpca_data}
 library(tidyverse)
+library(magrittr)
 load("../data/mandarino-proc.RData")
 mandarino = mandarino[ , -6 ]
 mandarino_wide = spread(mandarino, time, "f0")
@@ -29,63 +30,53 @@ Y = as.matrix(mandarino_wide[ , 5:(NCOL(mandarino_wide)) ])     # Funzioni osser
 Stima delle funzioni principali che spieghino il 95\% della varianza funzionale:
 
 ```{r fpca_base}
+
 library(fdapace)
 
 Y_list = lapply(seq_len(NROW(Y)), function(i) Y[i,])
 t_list = lapply(seq_len(NROW(Y)), function(i) 1:20)
 
-fpcaBase = FPCA(Ly = Y_list, Lt = t_list, optns = list(FVEthreshold = 0.95))
-plot(fpcaBase)
-K = fpcaBase$selectK                # Selected number of fPC
+library(MFPCA)
+data_fun = funData(1:20, Y)
 
-matplot(fpcaBase$phi, type = "l")
-legend("topleft", legend=paste0("fPC ", 1:K), col=1:K,cex=0.8, fill=1:K)
+fpcaPace = PACE(data_fun, pve = 0.999)
+{
+    # Confronto Y osservate con ricostruite
+    par(mfrow = c(2,1))
+    matplot(t(Y), type = "l", main = "Observed functions")
+    matplot(t(fpcaPace$fit@X), type = "l", main = "Reconstructed functions")
+    par(mfrow = c(1,1))
+}
 
+data_multifun = multiFunData(data_fun)
+K = 3
+mfpca = MFPCA(data_multifun, M = K,
+              uniExpansions = list(list(type = "uFPCA", npc = K)),
+              fit = TRUE
+)
+scoreplot(mfpca)
+scoresFPCA = mfpca$scores
+
+{
+    # Confronto fPCA univariate con MFPCA
+    par(mfrow = c(2,1))
+    matplot(t(fpcaPace$functions@X), type = "l", main = "PACE")
+    matplot(t(mfpca$functions[[1]]@X), type = "l", main = "PACE")
+    par(mfrow = c(1,1))
+    # Ok, sono solo flippate di segno
+}
+
+{
+    # Confronto Y osservate con ricostruite tramite mfpca
+    par(mfrow = c(2,1))
+    matplot(t(Y), type = "l", main = "Observed functions")
+    matplot(t(mfpca$fit[[1]]@X), type = "l", main = "Reconstructed functions")
+    par(mfrow = c(1,1))
+}
 ```
 
 
 Confronto tra dati originali e dati ricostruiti con le prime `r print(K)` componenti principali stimate:
-
-```{r fpca_plot}
-ypred = predict(fpcaBase, Y_list, t_list)
-{
-    par(mfrow = c(2,1))
-    matplot(t(Y), type = "l")
-    matplot(t(ypred$predCurves), type = "l")
-    par(mfrow = c(1,1))
-}
-```
-
-```{r fpca_test_equal}
-# Verifico che le componenti principali sono stimate come mu + eigenfunctions %*% t(score)
-scoresFPCA = fpcaBase$xiEst                              # Scores for each observation
-eigenFPCA = fpcaBase$phi                                 # Estimated eigenfunctions
-predY = fpcaBase$mu + eigenFPCA %*% t(scoresFPCA)        # Y stimata a mano
-
-{
-    par(mfrow = c(2,1))
-    matplot(t(ypred$predCurves), type = "l")
-    matplot(predY, type = "l")
-    par(mfrow = c(1,1))
-}
-```
-
-```{r fpca_pred}
-predFPCA = function(fpca, predictedScores){
-    # Funzione che calcola le Y previste sulla base degli scores ottenuti da un modello
-	#
-    # @param fpca, risultato di una chiamata alla funzione FPCA
-    # @param predictedScores scores previsti, matrice n x K
-	#
-    # @return matrice 20 x n contenente su ogni colonna la funzione Y prevista
-
-    eigenFun = fpca$phi
-    mu       = fpca$mu
-    predY = mu + eigenFun %*% t(predictedScores)
-    return(predY)
-}
-
-```
 
 ## Modello lineare multivariato sulle fPC ##
 Tutti effetti fissi
@@ -95,6 +86,18 @@ for(i in 1:K){
     fitScoresBase[[i]] = lm(scoresFPCA[ , i ] ~ cog_load + syllable1 + syllable2 + subject + syllable1:syllable2, data = mandarino_wide)
 }
 lapply(fitScoresBase, summary)
+
+fitScoresBase %>%
+    lapply(predict) %>%
+    do.call(cbind, .) -> predScoresLm
+
+predFpcaLm = predict(mfpca, predScoresLm)
+{
+    par(mfrow = c(2,1))
+    matplot(t(Y), type = "l", main = "Dati osservati")
+    matplot(t(predFpcaLm[[1]]@X), type = "l", main = "Modello lineare")
+    par(mfrow = c(1,1))
+}
 ```
 
 ## Modello lineare multivariato con penalizzazione elastic-net ##
@@ -107,12 +110,12 @@ plot(mgausGlmnet)
 coef(mgausGlmnet)
 
 # Confronto osservate con previste
-predScores  = predict(mgausGlmnet, newx = X)[ , , 1]
-predYglmnet = predFPCA(fpcaBase, predScores)
+predScoresGlmnet  = predict(mgausGlmnet, newx = X)[ , , 1]
+predFpcaGlmnet = predict(mfpca, predScoresGlmnet)
 {
     par(mfrow = c(2,1))
-    matplot(predY, type = "l")
-    matplot(predYglmnet, type = "l")
+    matplot(t(Y), type = "l", main = "Dati osservati")
+    matplot(t(predFpcaGlmnet[[1]]@X), type = "l", main = "Group Lasso")
     par(mfrow = c(1,1))
 }
 ```
@@ -128,24 +131,30 @@ set.seed(123)
 
 # Preparo i dati per Stan
 data_stan = cbind(mandarino_wide[ , 1:4], "scores" = scoresFPCA)
+
 # Stima del modello
-fitStan = stan_mvmer(
-                     formula = list(
-                                    scores.1 ~ cog_load + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 + syllable1:syllable2|subject),
-                                    scores.2 ~ cog_load + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2|subject),
-                                    scores.3 ~ cog_load + syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2|subject)
-                                    ),
-                     data = data_stan,
-                     cores = cores,
-                     chains = chains
-)
-save(fitStan, file="fitStan.Rdata")
+if(!file.exists("fitStan.Rdata")){
+    fitStan = stan_mvmer(
+                         formula = list(
+                                        scores.1 ~ syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 + syllable1:syllable2 |subject),
+                                        scores.2 ~  syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject),
+                                        scores.3 ~  syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 |subject)
+                                        ),
+                         data = data_stan,
+                         cores = cores,
+                         chains = chains
+    )
+    save(fitStan, file="fitStan.Rdata")
+} else {
+    load("fitStan.Rdata")
+}
 summary(fitStan)
 posterior_interval(fitStan)
 
-scoresPred1 = posterior_predict(fitStan, draws = 50, m = 1)
-scoresPred2 = posterior_predict(fitStan, draws = 50, m = 2)
-scoresPred3 = posterior_predict(fitStan, draws = 50, m = 3)
+# Distribuzione predittiva a posteriori
+scoresPred1 = posterior_predict(fitStan, draws = 100, m = 1)
+scoresPred2 = posterior_predict(fitStan, draws = 100, m = 2)
+scoresPred3 = posterior_predict(fitStan, draws = 100, m = 3)
 
 
 ppc_dens_overlay_grouped(data_stan$scores.1, scoresPred1, group = data_stan$subject)
@@ -155,12 +164,12 @@ ppc_dens_overlay_grouped(data_stan$scores.3, scoresPred3, group = data_stan$subj
 ```
 
 ```{r fpca_predcurves}
-plotPredictiveInterval = function(fitStan, fpcaBase, i, Y = NULL, p = c(0.025, 0.975), draws = 500){
+plotPredictiveInterval_mlmer = function(fitStan, fpca, i, Y = NULL, p = c(0.025, 0.975), draws = 500){
     # Plot di E(Y*)|Y e intervallo previsivo di probabilita' p
     # per la curva di indice i nel dataframe passato a Stan.
 	#
     # @param fitStan, modello Stan stimato
-    # @param fpcaBase, risultato della chiamata a FPCA
+    # @param fpcaBase, risultato della chiamata a MFPCA
     # @param i, indice della curva, 1 \le i \le NROW(data_stan)
     # @param p, quantili per l'intervallo previsivo a posteriori
     # @param draws, numero di simulazioni di Y* | Y
@@ -175,17 +184,63 @@ plotPredictiveInterval = function(fitStan, fpcaBase, i, Y = NULL, p = c(0.025, 0
         ytrue = Y[i, ]
         brks  = c("y_obs", "E(fpca|y_obs)")
     } else {
-        predY = fpcaBase$mu + fpcaBase$phi %*% t(fpcaBase$xiEst)
-        ytrue = predY[ , i ]
+        ytrue = fpca$fit[[1]]@X[i, ]
         brks  = c("fpca_obs", "E(fpca|y_obs)")
     }
     scores1 = posterior_predict(fitStan, draws = draws, m = 1)
     scores2 = posterior_predict(fitStan, draws = draws, m = 2)
     scores3 = posterior_predict(fitStan, draws = draws, m = 3)
 
-    ypred = predFPCA(fpcaBase, cbind(scores1[ , i ], scores2[ , i ], scores3[ , i ]))
-    qqypred = apply(ypred, 1, function(col) quantile(col, probs = p))
-    meanpred = apply(ypred, 1, mean)
+    ypred = predict(fpca, cbind(scores1[ , i ], scores2[ , i ], scores3[ , i ]))[[1]]@X
+    qqypred = apply(ypred, 2, function(col) quantile(col, probs = p))
+    meanpred = apply(ypred, 2, median)
+
+    df = data.frame("ytrue" = ytrue, "meanpred" = meanpred,
+               "lower" = qqypred[1, ], "upper" = qqypred[2, ])
+
+    ggplot(df) +
+        geom_ribbon(aes(x=as.integer(rownames(df)), ymin = lower, ymax = upper), alpha = 0.65, fill = "gray") +
+        geom_line(aes(x=as.integer(rownames(df)), y = ytrue, colour = brks[1])) +
+        geom_line(aes(x=as.integer(rownames(df)), y = meanpred, colour = brks[2])) +
+        scale_colour_manual("", 
+                      breaks = brks,
+                      values = c("black", "blue")) +
+        xlab("t") +
+        ylab("f0") 
+}
+
+plotPredictiveInterval_lmer = function(fitStanList, fpca, i, Y = NULL, p = c(0.025, 0.975), draws = 500){
+    # Plot di E(Y*)|Y e intervallo previsivo di probabilita' p
+    # per la curva di indice i nel dataframe passato a Stan (K modelli indipendenti).
+	#
+    # @param fitStanList, lista contenente un modello per ciascuna componente principale
+    # @param fpcaBase, risultato della chiamata a MFPCA
+    # @param i, indice della curva, 1 \le i \le NROW(data_stan)
+    # @param p, quantili per l'intervallo previsivo a posteriori
+    # @param draws, numero di simulazioni di Y* | Y
+	#
+    # @return un oggetto `ggplot2` contenente il grafico
+
+    require(magrittr)
+    require(ggplot2)
+
+    # Curve osservate
+    if(!is.null(Y)){
+        ytrue = Y[i, ]
+        brks  = c("y_obs", "E(fpca|y_obs)")
+    } else {
+        ytrue = fpca$fit[[1]]@X[i, ]
+        brks  = c("fpca_obs", "E(fpca|y_obs)")
+    }
+
+    scores = NULL
+    for(k in 1:length(fitStanList)){
+        scores = cbind(scores, posterior_predict(fitStanList[[k]], draws = draws)[ , i ])
+    }
+
+    ypred = predict(fpca, scores)[[1]]@X
+    qqypred = apply(ypred, 2, function(col) quantile(col, probs = p))
+    meanpred = apply(ypred, 2, median)
 
     df = data.frame("ytrue" = ytrue, "meanpred" = meanpred,
                "lower" = qqypred[1, ], "upper" = qqypred[2, ])
@@ -204,11 +259,95 @@ plotPredictiveInterval = function(fitStan, fpcaBase, i, Y = NULL, p = c(0.025, 0
 library(gridExtra)
 library(lemon)
 library(ggpubr)
+```
+```{r fpca_mvmer_plot}
 
-plots_fpca = lapply(1:12, function(i) plotPredictiveInterval(fitStan, fpcaBase, i))
+# Plot T1-T1
+plots_fpca = lapply(1:12, function(i) plotPredictiveInterval_mlmer(fitStan, mfpca, i))
 ggarrange(plotlist = plots_fpca, common.legend = TRUE, legend = "right")
 
-plots_yobs = lapply(13:24, function(i) plotPredictiveInterval(fitStan, fpcaBase, i, Y))
+plots_yobs = lapply(1:12, function(i) plotPredictiveInterval_mlmer(fitStan, mfpca, i, Y))
+ggarrange(plotlist = plots_yobs, common.legend = TRUE, legend = "right")
+
+# Plot T1-T2
+plots_fpca = lapply(13:24, function(i) plotPredictiveInterval_mlmer(fitStan, mfpca, i))
+ggarrange(plotlist = plots_fpca, common.legend = TRUE, legend = "right")
+
+plots_yobs = lapply(13:24, function(i) plotPredictiveInterval_mlmer(fitStan, mfpca, i, Y))
+ggarrange(plotlist = plots_yobs, common.legend = TRUE, legend = "right")
+
+# Plot T2-T1
+plots_fpca = lapply(241:252, function(i) plotPredictiveInterval_mlmer(fitStan, mfpca, i))
+ggarrange(plotlist = plots_fpca, common.legend = TRUE, legend = "right")
+
+plots_yobs = lapply(241:252, function(i) plotPredictiveInterval_mlmer(fitStan, mfpca, i, Y))
+ggarrange(plotlist = plots_yobs, common.legend = TRUE, legend = "right")
+
+# Plot T3-T4
+plots_fpca = lapply(324:335, function(i) plotPredictiveInterval_mlmer(fitStan, mfpca, i))
+ggarrange(plotlist = plots_fpca, common.legend = TRUE, legend = "right")
+
+plots_yobs = lapply(324:335, function(i) plotPredictiveInterval_mlmer(fitStan, mfpca, i, Y))
+ggarrange(plotlist = plots_yobs, common.legend = TRUE, legend = "right")
+```
+
+## Modello ad effetti misti indipendente, componente per componente ##
+
+
+
+```{r fpca_lmmStan_indep}
+if(!file.exists("fitStanIndep.Rdata")){
+    fitStanIndep = vector(mode = "list", length = K)
+    for(i in 1:K){
+        fitStanIndep[[i]] = stan_lmer(formula(paste0("scores.", i , "~ syllable1 + syllable2 + syllable1:syllable2 + (1 + syllable1 + syllable2 + syllable1:syllable2 | subject)")),
+                             data = data_stan,
+                             prior = laplace(autoscale = TRUE),
+                             QR = TRUE,
+                             chains = chains,
+                             cores = cores
+        )
+    }
+    save(fitStanIndep, file="fitStanIndep.Rdata")
+} else {
+    load("fitStanIndep.Rdata")
+}
+
+# Distribuzione predittiva a posteriori
+scoresPredIndep1 = posterior_predict(fitStanIndep[[1]], draws = 100)
+scoresPredIndep2 = posterior_predict(fitStanIndep[[2]], draws = 100)
+scoresPredIndep3 = posterior_predict(fitStanIndep[[3]], draws = 100)
+
+
+ppc_dens_overlay_grouped(data_stan$scores.1, scoresPredIndep1, group = data_stan$subject)
+ppc_dens_overlay_grouped(data_stan$scores.2, scoresPredIndep2, group = data_stan$subject)
+ppc_dens_overlay_grouped(data_stan$scores.3, scoresPredIndep3, group = data_stan$subject)
+
+# Plot T1-T1
+plots_fpca = lapply(1:12, function(i) plotPredictiveInterval_lmer(fitStanIndep, mfpca, i))
+ggarrange(plotlist = plots_fpca, common.legend = TRUE, legend = "right")
+
+plots_yobs = lapply(1:12, function(i) plotPredictiveInterval_lmer(fitStanIndep, mfpca, i, Y))
+ggarrange(plotlist = plots_yobs, common.legend = TRUE, legend = "right")
+
+# Plot T1-T2
+plots_fpca = lapply(13:24, function(i) plotPredictiveInterval_lmer(fitStanIndep, mfpca, i))
+ggarrange(plotlist = plots_fpca, common.legend = TRUE, legend = "right")
+
+plots_yobs = lapply(13:24, function(i) plotPredictiveInterval_lmer(fitStanIndep, mfpca, i, Y))
+ggarrange(plotlist = plots_yobs, common.legend = TRUE, legend = "right")
+
+# Plot T2-T1
+plots_fpca = lapply(241:252, function(i) plotPredictiveInterval_lmer(fitStanIndep, mfpca, i))
+ggarrange(plotlist = plots_fpca, common.legend = TRUE, legend = "right")
+
+plots_yobs = lapply(241:252, function(i) plotPredictiveInterval_lmer(fitStanIndep, mfpca, i, Y))
+ggarrange(plotlist = plots_yobs, common.legend = TRUE, legend = "right")
+
+# Plot T3-T4
+plots_fpca = lapply(324:335, function(i) plotPredictiveInterval_lmer(fitStanIndep, mfpca, i))
+ggarrange(plotlist = plots_fpca, common.legend = TRUE, legend = "right")
+
+plots_yobs = lapply(324:335, function(i) plotPredictiveInterval_lmer(fitStanIndep, mfpca, i, Y))
 ggarrange(plotlist = plots_yobs, common.legend = TRUE, legend = "right")
 ```
 
