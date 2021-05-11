@@ -36,10 +36,34 @@ library(fdapace)
 Y_list = lapply(seq_len(NROW(Y)), function(i) Y[i,])
 t_list = lapply(seq_len(NROW(Y)), function(i) 1:20)
 
+fpcaBase = FPCA(Ly = Y_list, Lt = t_list, optns = list(FVEthreshold = 0.99))
+ypred = predict(fpcaBase, Y_list, t_list)
+{
+    # Confronto fPCA univariate con MFPCA
+    par(mfrow = c(2,1))
+    matplot(t(Y), type = "l")
+    matplot(t(ypred$predCurves), type = "l")
+    par(mfrow = c(1,1))
+}
+
+# Verifico che le componenti principali sono stimate come mu + eigenfunctions %*% t(score)
+scoresFPCA = fpcaBase$xiEst                              # Scores for each observation
+eigenFPCA = fpcaBase$phi                                 # Estimated eigenfunctions
+predY = fpcaBase$mu + eigenFPCA %*% t(scoresFPCA)        # Y stimata a mano
+
+{
+    # Confronto fPCA con predict e calcolate a mano
+    par(mfrow = c(2,1))
+    matplot(t(ypred$predCurves), type = "l")
+    matplot(predY, type = "l")
+    par(mfrow = c(1,1))
+}
+```
+```{r}
 library(MFPCA)
 data_fun = funData(1:20, Y)
 
-fpcaPace = PACE(data_fun, pve = 0.999)
+fpcaPace = PACE(data_fun, pve = 0.95)
 {
     # Confronto Y osservate con ricostruite
     par(mfrow = c(2,1))
@@ -49,7 +73,7 @@ fpcaPace = PACE(data_fun, pve = 0.999)
 }
 
 data_multifun = multiFunData(data_fun)
-K = 3
+K = 5
 mfpca = MFPCA(data_multifun, M = K,
               uniExpansions = list(list(type = "uFPCA", npc = K)),
               fit = TRUE
@@ -92,6 +116,7 @@ fitScoresBase %>%
     do.call(cbind, .) -> predScoresLm
 
 predFpcaLm = predict(mfpca, predScoresLm)
+
 {
     par(mfrow = c(2,1))
     matplot(t(Y), type = "l", main = "Dati osservati")
