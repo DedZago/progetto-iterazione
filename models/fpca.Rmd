@@ -70,6 +70,7 @@ predY = fpcaBase$mu + eigenFPCA %*% t(scoresFPCA)        # Y stimata a mano
 }
 ```
 
+<<<<<<< Updated upstream
 ```{r fpca_pred}
 predFPCA = function(fpca, predictedScores){
     # Funzione che calcola le Y previste sulla base degli scores ottenuti da un modello
@@ -78,6 +79,25 @@ predFPCA = function(fpca, predictedScores){
     # @param predictedScores scores previsti, matrice n x K
 	#
     # @return matrice 20 x n contenente su ogni colonna la funzione Y prevista
+=======
+fpcaPace = PACE(data_fun, pve = 0.95)
+{
+    # Confronto Y osservate con ricostruite
+    par(mfrow = c(2,1))
+    matplot(t(Y), type = "l", main = "Observed functions")
+    matplot(t(fpcaPace$fit@X), type = "l", main = "Reconstructed functions")
+    par(mfrow = c(1,1))
+}
+
+data_multifun = multiFunData(data_fun)
+K = 3
+mfpca = MFPCA(data_multifun, M = K,
+              uniExpansions = list(list(type = "uFPCA", npc = K)),
+              fit = TRUE
+)
+scoreplot(mfpca)
+scoresFPCA = mfpca$scores
+>>>>>>> Stashed changes
 
     eigenFun = fpca$phi
     mu       = fpca$mu
