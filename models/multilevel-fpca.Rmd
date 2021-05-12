@@ -1,5 +1,5 @@
 ---
-title: "Modellazione multilevel"
+title: "Modellazione multilevel con componenti principali funzionali"
 author: "Daniele Zago, Simon Mazzarolo, Silvia Brosolo, Emanuele Donà"
 date: "2021-04-28"
 output: 
@@ -140,10 +140,10 @@ ppc_full = function(dati, ypred){
 ```
 
 ```{r stan_lme_fit}
-if(file.exists("fitStanLmer2.Rdata")){
-    load("fitStanLmer2.Rdata")
+if(file.exists("fitStanLmerFpca.Rdata")){
+    load("fitStanLmerFpca.Rdata")
 } else{
-    fitStanLmer2 = stan_glmer(f0 ~ cog_load + current +
+    fitStanLmerFpca = stan_glmer(f0 ~ cog_load + current +
                               PC1 + PC2 + PC3 + PC4 +
                               PC1:syllable1 + PC1:syllable2 +
                               PC2:syllable1 + PC2:syllable2 +
@@ -165,20 +165,20 @@ if(file.exists("fitStanLmer2.Rdata")){
                     algorithm = "meanfield",
                     iter = 20000,
                     QR = TRUE)
-    save(fitStanLmer2, file="fitStanLmer2.Rdata")
+    save(fitStanLmerFpca, file="fitStanLmerFpca.Rdata")
 }
 ```
 
 ```{r stan_lme_ppc}
-plot(fitStanLmer2, pars=names(fitStanLmer2$coefficients)[1:33])
+plot(fitStanLmerFpca, pars=names(fitStanLmerFpca$coefficients)[1:33])
 ```
 
 ```{r stan_lme_pred}
-ypredStanLmer2 = posterior_predict(fitStanLmer2, draws = 500)
-ypred = apply(ypredStanLmer2, 2, mean)
-stdev = apply(ypredStanLmer2, 2, sd)
-lmin = apply(ypredStanLmer2, 2, function(col) quantile(col, p = 0.05))
-lmax = apply(ypredStanLmer2, 2, function(col) quantile(col, p = 0.95))
+ypredStanLmerFpca = posterior_predict(fitStanLmerFpca, draws = 500)
+ypred = apply(ypredStanLmerFpca, 2, mean)
+stdev = apply(ypredStanLmerFpca, 2, sd)
+lmin = apply(ypredStanLmerFpca, 2, function(col) quantile(col, p = 0.05))
+lmax = apply(ypredStanLmerFpca, 2, function(col) quantile(col, p = 0.95))
 
 ppc_subject("S1", mandarino, ypred, lmin, lmax)
 ppc_subject("S2", mandarino, ypred, lmin, lmax)
