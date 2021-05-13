@@ -35,6 +35,8 @@ Costruiamo il dataset in formato "largo" per la stima delle fPCA:
 ```{r fpca_data}
 mandarino_wide = spread(mandarino[ , -6 ], time, "f0")
 Y = as.matrix(mandarino_wide[ , 5:(NCOL(mandarino_wide)) ])     # Funzioni osservate
+
+mandarino$peak = ifelse(mandarino$time >= 7 & mandarino$time <= 13, 1, 0)
 ```
 
 # Analisi con componenti principali funzionali (fPCA)#
@@ -167,6 +169,7 @@ if(file.exists("fitStanLmerFpca.Rdata")){
                     QR = TRUE)
     save(fitStanLmerFpca, file="fitStanLmerFpca.Rdata")
 }
+summary(fitStanLmerFpca)
 ```
 
 ```{r stan_lme_ppc}
@@ -194,5 +197,46 @@ ppc_subject("S4", mandarino, ypred, lmin, lmax)
 # ppc_subject("S12", mandarino, ypred, lmin, lmax)
 
 ppc_full(mandarino, ypred)
+```
+
+## Selezione effetti fissi e casuali con LOOCV 
+
+```{r effetti fissi}
+cores  = min(4, parallel::detectCores())
+library(loo)
+
+# Nel primo modello metto un po' di tutto
+set.seed(123)
+fitStanLmerFpca1 = stan_glmer(f0 ~ cog_load + current + peak + syllable1 + syllable2 + syllable1:syllable2 +
+                              PC1 + PC2 + PC3 + PC4 +
+                              PC1:syllable1 + PC1:syllable2 +
+                              PC2:syllable1 + PC2:syllable2 +
+                              PC3:syllable1 + PC3:syllable2 +
+                              PC4:syllable1 + PC4:syllable2 +
+                              (1 | subject) +
+                              (0 + current|subject) +
+                              (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                              (0 + PC1:syllable1 | subject) +
+                              (0 + PC1:syllable2 | subject) +
+                              (0 + PC2:syllable1 | subject) +
+                              (0 + PC2:syllable2 | subject) +
+                              (0 + PC3:syllable1 | subject) +
+                              (0 + PC3:syllable2 | subject) +
+                              (0 + PC4:syllable1 | subject) +
+                              (0 + PC4:syllable2 | subject) 
+                              ,
+                         data = mandarino_fpca,
+                    algorithm = "meanfield",
+                    iter = 20000,
+                    QR = TRUE)
+
+save(fitStanLmerFpca1, file="fitStanLmerFpca1.Rdata")
+summary(fitStanLmerFpca1)
+
+loo1 <- loo(fitStanLmerFpca1, cores = cores) # warnings?
+loo1$estimates
+#k1 <- kfold(fitStanLmerFpca1, K = 10, cores = cores, verbose = T) RIP si impianta
+
+
 ```
 
