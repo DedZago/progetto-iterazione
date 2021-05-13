@@ -1,0 +1,107 @@
+\definecolor{amber}{rgb}{1.0, 0.49, 0.0}
+\newcommand{\TODO}{{\color{amber}\bfseries TODO}\ }
+\newcommand{\dotsim}{\overset{.}{\sim}} % asymptotically distr.
+\newcommand{\indep}{\perp\!\!\!\perp}   % independence
+\newcommand*\de{\partial}				% partial derivative
+\newcommand{\vect}[1]{\begin{pmatrix}#1\end{pmatrix}}
+\newcommand{\overbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
+\newcommand{\R}{\mathbb{R}}				% reals
+\newcommand{\Z}{\mathbb{Z}}				% integers
+\newcommand{\N}{\mathbb{N}}				% natural numbers
+\newcommand{\Q}{\mathbb{Q}}				% rational numbers
+\newcommand{\C}{\mathbb{C}}				% complex numbrs
+
+\let\Im\relax
+\let\Pr\relax
+\DeclareMathOperator{\Pr}{Pr}
+\DeclareMathOperator{\Im}{Im}			% image
+\DeclareMathOperator{\Dom}{Dom}			% domain
+\let\vec\relax
+\DeclareMathOperator{\vec}{vec}
+% Caligraphic alphabet
+% \newcommand{\tran}{^{\mkern-1.5mu\mathsf{T}}}
+\newcommand{\tran}{\ensuremath{^\top}}
+\newcommand{\ind}[1]{\mathbbm{1}_{#1}}      % Indicator function
+\newcommand{\one}{\mathbbm{1}}              % Indicator function
+\let\span\relax
+\DeclareMathOperator{\span}{span}           % span
+\DeclareMathOperator{\rank}{rank}           % rank
+\DeclareMathOperator{\tr}{tr}               % trace
+\DeclareMathOperator{\pr}{Pr}               % probability
+\DeclareMathOperator{\E}{\mathbb{E}}        % expectation
+\DeclareMathOperator{\V}{\mathbb{V}}		% variance
+\DeclareMathOperator{\Cov}{Cov}				% covariance
+\DeclareMathOperator{\corr}{corr}			% correlation
+\DeclareMathOperator{\sgn}{sgn}				% sggn
+\DeclareMathOperator{\diag}{diag}			% diagonal matrix
+\DeclareMathOperator{\relint}{relint}		% relative interior
+\DeclareMathOperator*{\conv}{conv}			% convex hull
+\DeclareMathOperator{\cl}{cl}				% closure
+\DeclareMathOperator{\aff}{aff}				% affine closure
+\DeclareMathOperator{\sign}{sign}			% sign
+\DeclareMathOperator{\KL}{\textsc{KL}}		% kullback-leibler divergence
+\DeclareMathOperator{\ELBO}{\textsc{ELBO}}	% evidence lower bound
+\DeclareMathOperator*{\argmax}{argmax}		% argmax
+\DeclareMathOperator*{\argmin}{argmin}		% argmin
+\DeclareMathOperator{\sech}{sech}
+\DeclareMathOperator{\csch}{csch}
+\DeclareMathOperator{\arcsec}{arcsec}
+\DeclareMathOperator{\arccot}{arcCot}
+\DeclareMathOperator{\arccsc}{arcCsc}
+\DeclareMathOperator{\arccosh}{arcCosh}
+\DeclareMathOperator{\arcsinh}{arcsinh}
+\DeclareMathOperator{\arctanh}{arctanh}
+\DeclareMathOperator{\arcsech}{arcsech}
+\DeclareMathOperator{\arccsch}{arcCsch}
+\DeclareMathOperator{\arccoth}{arcCoth} 
+\newcommand{\law}{\mathcal{L}}				% \law{X}, the measure associated with r.v. X
+
+% Convergence
+\DeclareMathOperator*{\convd}{\overset{\textit{d}}{\longrightarrow}} % convergence in distribution/law/measure
+\DeclareMathOperator*{\convp}{\overset{\textit{P}}{\longrightarrow}} % convergence in probability
+\DeclareMathOperator*{\convas}{\overset{\textrm{a.s.}}{\longrightarrow}} % convergence almost surely
+\DeclareMathOperator*{\plim}{plim}           % limit in probability
+
+\newcommand{\eqd}{\overset{d}{=}} % equal in distribution/law/measure
+
+%------------------------------------------------
+
+
+\newcommand{\BeginToDo}{\par
+	\moveleft 1cm \vbox{\color{red}\hrule width \dimexpr\linewidth+2cm\relax height 1.75pt}
+	\centerline{\color{red} \bfseries THE FOLLOWING CONTENT NEEDS REVISION}
+	\markboth{THIS PAGE CONTAINS STUFF TO BE REVISED}
+	{THIS PAGE CONTAINS STUFF TO BE REVISED}}
+\newcommand{\EndToDo}{\par
+	\centerline{\color{red} \bfseries ---end of to be revised text---} 
+	\moveleft 1cm \vbox{\color{red}\hrule width \dimexpr\linewidth+2cm\relax height 1.75pt}
+	\markboth {THIS PAGE CONTAINS STUFF TO BE REVISED}
+	{THIS PAGE CONTAINS STUFF TO BE REVISED}
+	\medskip}
+
+
+\DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathx}{m}{n}{
+      <5> <6> <7> <8> <9> <10>
+      <10.95> <12> <14.4> <17.28> <20.74> <24.88>
+      mathx10
+      }{}
+\DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
+\DeclareMathSymbol{\varprod}{1}{mathx}{"91}
+
+% Small dots for psmallmatrix
+\newcommand{\svdots}{\raisebox{3pt}{$\scalebox{.75}{\vdots}$}} 
+\newcommand{\sddots}{\raisebox{3pt}{$\scalebox{.75}{$\ddots$}$}}
+
+
+\DeclareUnicodeCharacter{0394}{$\Delta$}
+\DeclareUnicodeCharacter{03B3}{$\gamma$}
+\DeclareUnicodeCharacter{03A6}{$\Phi$}
+\DeclareUnicodeCharacter{03BC}{$\mu$}
+\DeclareUnicodeCharacter{03A3}{$\Sigma$}
+\DeclareUnicodeCharacter{03A5}{$\Upsilon$}
+\DeclareUnicodeCharacter{0393}{$\Gamma$}
+\DeclareUnicodeCharacter{0398}{$\Theta$}
+\DeclareUnicodeCharacter{03B1}{$\alpha$}
+\DeclareUnicodeCharacter{03BD}{$\nu$}
+\DeclareUnicodeCharacter{03D1}{$\vartheta$}

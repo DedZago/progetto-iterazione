@@ -1,0 +1,393 @@
+% This style file requires at least LaTeX version 2e.
+\NeedsTeXFormat{LaTeX2e}
+
+\RequirePackage[english,italian]{babel}
+\RequirePackage{translations}
+
+% --- Appendici in italiano
+\RequirePackage{appendix}
+\addto\captionsitalian{%
+   \renewcommand{\appendixtocname}{Appendici}%
+   \renewcommand{\appendixpagename}{Appendici}%
+}
+% ---
+
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage{relsize}	                              % \smaller and \bigger commands
+\RequirePackage{float}		                              % float option [H]
+\RequirePackage{amsmath, amssymb, amsthm, mathtools}      % math tools
+\RequirePackage{bm} 		                              % \bm for boldmath
+\RequirePackage{enumitem}
+\RequirePackage{cancel}                                   % \cancel command
+\RequirePackage{siunitx}                                  % \SI units
+\RequirePackage[colorlinks]{hyperref}                     % hyperlinks
+\RequirePackage{xcolor}                                   % colours
+
+\RequirePackage{algorithm}                                % algorithm environment
+\RequirePackage{algpseudocode}                            % better algorithms
+\RequirePackage{mathrsfs} 	                              % serif fonts
+\RequirePackage{bbm}                                      % indicator function
+\RequirePackage{graphicx}                                 % figures
+\RequirePackage{subcaption}                               % subcaptions for figures
+\RequirePackage{booktabs}                                 % prettier tables
+\RequirePackage{array}                                    % table structure management
+
+\setlength\parindent{0pt}
+\RequirePackage{setspace}
+\RequirePackage{titlesec}
+\RequirePackage[framemethod=TikZ]{mdframed}               % boxes around environments
+\RequirePackage{chngcntr}                                 % counter management
+\RequirePackage[margin=1.5cm]{caption}                    % caption size
+
+\RequirePackage{titleps}                                  % subsection in header
+\RequirePackage{listings}
+\RequirePackage{minted}	                                  % code highlighting with minted
+
+%----
+% Base math spacing inside matrix
+\makeatletter
+\preto\env@matrix{\renewcommand{\arraystretch}{1}}
+\makeatother
+%----
+
+\frenchspacing						                      % more pleasant spacing
+
+
+
+% Centered column for arrays
+\newcommand{\centercolumn}[1]{\multicolumn{1}{c}{#1}}
+
+%----
+% Bold math when placed in section titles
+\makeatletter
+\g@addto@macro\bfseries{\boldmath}
+\makeatother
+%----
+
+%------------
+% Code style
+%------------
+% Solarized style:
+% >> sudo pip install pygments-style-solarized
+% >> pygmentize -S solarizedlight -f html > solarizedlight.css
+
+% \usemintedstyle{solarizedlight}
+% \definecolor{slbg}{rgb}{0.99215686,0.96470588,0.89019607}		% solarized-light bg
+% \let\inputmintedorg\inputminted
+% \renewcommand{\inputminted}[2]{%
+% \begin{mdframed}[%backgroundcolor=slbg,%
+% 	topline=false, bottomline=false,%
+% 	leftline=false, rightline=false]
+% 	\inputmintedorg{#1}{#2}
+% \end{mdframed}
+% }
+
+
+%----------------
+% Citation style
+%----------------
+\RequirePackage{csquotes}
+\RequirePackage[
+	style=ext-authoryear,   % Allow sentencecase for titles only
+	% style=bwl-FU,
+	giveninits=true,
+	maxbibnames=2,
+    maxcitenames=2,
+	url=false,
+	isbn =false,
+	doi=false,
+	eprint=false,
+	backend=biber,
+	natbib]
+	{biblatex}
+
+\AtEveryBibitem{\clearfield{month}}
+\AtEveryBibitem{\clearfield{day}}
+
+%----
+% Sentence case for titles
+\DeclareFieldFormat
+  [article,inbook,incollection,inproceedings,patent,thesis,unpublished]
+  {titlecase:title}{\MakeSentenceCase*{#1}}
+\setlength\bibitemsep{0.7\baselineskip}
+\DeclareNameAlias{sortname}{last-first}
+%----
+
+%----
+% citation command: author (year)
+\DeclareCiteCommand{\tcite}
+  {\boolfalse{cbx:parens}}
+  {\usebibmacro{citeindex}%
+   \ifboolexpr{ ( not test {\iffieldundef{prenote}} and
+                  test {\ifnumequal{\value{citecount}}{1}} ) or
+                ( not test {\iffieldundef{postnote}} and
+                  test {\ifnumequal{\value{citecount}}{\value{citetotal}}} ) }
+     {\usebibmacro{textcite}}
+     {\printtext[bibhyperref]{% Apply citation link to bibmacro output
+        \DeclareFieldAlias{bibhyperref}{default}% Prevent nested hyperlinks
+        \usebibmacro{textcite}%
+        \ifbool{cbx:parens}{\bibcloseparen\global\boolfalse{cbx:parens}}{}}}}
+  {\ifbool{cbx:parens}{\bibcloseparen\global\boolfalse{cbx:parens}}{}%
+   \multicitedelim}
+  {\usebibmacro{textcite:postnote}}
+%----
+
+\newcommand{\citestring}{\iflanguage{italian}{Riferimenti}{References}}
+\newcommand{\readingstring}{\iflanguage{italian}{Letture consigliate}{Suggested readings}}
+
+%--------------------
+% Algorithmic package
+%--------------------
+\algnewcommand{\Init}[1]{%
+  \State \textbf{Init:}
+  \Statex \hspace*{\algorithmicindent}\parbox[t]{.8\linewidth}{\raggedright #1}
+}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+\newcommand{\algstring}{\iflanguage{italian}{Algoritmo}{Algorithm}}
+\floatname{algorithm}{\algstring}
+
+%----
+% Spacing inside algorithm
+\RequirePackage{etoolbox}
+\makeatletter
+\expandafter\patchcmd\csname\string\algorithmic\endcsname{\itemsep\z@}{\itemsep=0.1cm plus 1pt}{}{}
+\makeatother
+%----
+
+%---------------
+% Page geometry
+%---------------
+\setstretch{1.17}
+\setlist[enumerate]{itemsep=1mm}
+\setlist[itemize]{itemsep=1mm}
+\renewcommand{\labelitemi}{\guilsinglright}
+
+% Do not linebreak equations
+\relpenalty=10000
+\binoppenalty=10000
+\graphicspath{{./Images/}}
+\def\svgwidth{0.8\textwidth}
+\addto\captionsitalian{\renewcommand\proofname{Dim.}}
+\setlength{\parskip}{1pt}
+\addtolength{\jot}{6pt}					% math spacing   
+\renewcommand{\arraystretch}{1.22}
+
+% Title geometry
+\RequirePackage{titling}				% Title font
+\setlength{\droptitle}{-1cm}
+\pretitle{\vspace{\droptitle}\begin{center}\Large\sc}
+\posttitle{\end{center}}
+
+
+\usepackage[verbose=true,letterpaper]{geometry}
+\AtBeginDocument{
+  \newgeometry{
+    textheight=9in,
+    textwidth=6in,
+    top=0.8in,
+	bottom=0.8in,
+    headheight=14pt,
+    headsep=15pt,
+    footskip=0.4in
+  }
+}
+
+\widowpenalty=10000
+\clubpenalty=10000
+\sloppy
+
+%------------------------
+% Page style with header
+%------------------------
+\usepackage{xifthen}
+% \makeatother
+\newcounter{lectcounter}
+\def\@lecture{}%
+
+\newcommand{\lecturestring}{\iflanguage{italian}{Lezione}{Lecture}}
+\newcommand{\thmstring}{\iflanguage{italian}{Teo.}{Thm.}}
+\newcommand{\corollstring}{\iflanguage{italian}{Corollario}{Corollary}}
+\newcommand{\examplestring}{\iflanguage{italian}{Esempio}{Example}}
+
+\newcommand{\lecture}[3]{
+    \ifthenelse{\isempty{#3}}{%
+		\def\@lecture{\lecturestring{} #1}%
+    }{%
+	\def\@lecture{\lecturestring{} #1: #3}%
+    }%
+	\clearpage
+	\section{\@lecture}
+    \marginpar{\mbox{#2}}
+}
+
+\usepackage{emptypage} % cleardoublepage makes white pages
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\rightmark}
+\fancyhead[R]{\nouppercase\leftmark}
+\fancyfoot[C]{\thepage}
+\makeatletter
+
+\newtheoremstyle{teo}
+  {\topsep}%
+  {\topsep}%
+  {\itshape}%
+  {}%
+  {\bfseries}
+  {\\[.07cm]}
+  {.5em}%
+  {\thmname{#1}~\thmnumber{#2}\thmnote{ (#3)}}%
+\theoremstyle{teo}
+\newmdtheoremenv[leftmargin=7, rightmargin=7, nobreak=true]{thm}{\thmstring\!\!}
+\renewcommand{\thethm}{\relax}
+
+\newtheoremstyle{propos}
+  {\topsep}%
+  {\topsep}%
+  {\itshape}%
+  {}%
+  {\bfseries}
+  {\\[.07cm]}
+  {.5em}%
+  {\thmname{#1}~\thmnumber{#2}\thmnote{ (#3)}}%
+\theoremstyle{propos}
+\newmdtheoremenv[leftmargin=7, rightmargin=7, nobreak=true]{prop}{Prop.\!\!}
+\renewcommand{\theprop}{\relax}
+
+\newtheoremstyle{coroll}
+  {\topsep}%
+  {\topsep}%
+  {\itshape}%
+  {}%
+  {\bfseries}
+  {\\[.07cm]}
+  {.5em}%
+  {\thmname{#1}~\thmnumber{#2}\thmnote{ (#3)}}%
+\theoremstyle{coroll}
+\newmdtheoremenv[leftmargin=7, rightmargin=7, nobreak=true]{corollario}{\corollstring\!}
+\renewcommand{\thecorollario}{\relax}
+
+\newtheoremstyle{lemm}
+  {\topsep}%
+  {\topsep}%
+  {\itshape}%
+  {}%
+  {\bfseries}
+  {\\[.07cm]}
+  {.5em}%
+  {\thmname{#1}~\thmnumber{#2}\thmnote{ (#3)}}%
+\theoremstyle{lemm}
+\newmdtheoremenv[leftmargin=7, rightmargin=7, nobreak=true]{lemma}{Lemma\!\!}
+\renewcommand{\thelemma}{\relax}
+
+% \RequirePackage{thmtools, varwidth}		% Useful?
+\definecolor{shadecolor}{gray}{0.95}
+
+\newtheoremstyle{ex}
+  {\topsep}%
+  {\topsep}%
+  {}%
+  {}%
+  {\bfseries}
+  {\\[.07cm]}
+  {.5em}%
+  {\thmname{#1}~\thmnumber{#2}\thmnote{ (#3)}}%
+\theoremstyle{ex}
+\newmdtheoremenv[backgroundcolor=shadecolor, topline=false,bottomline=false,leftline=false,rightline=false, leftmargin=7, rightmargin=7]{example}{\examplestring\!\!}
+\renewcommand{\theexample}{\relax}
+
+
+\newtheoremstyle{definition}
+  {\topsep}%
+  {\topsep}%
+  {}%
+  {}%
+  {\bfseries}
+  {\\[.07cm]}
+  {.5em}%
+  {\thmname{#1}~\thmnumber{#2}\thmnote{ (#3)}}%
+\theoremstyle{definition}
+\newmdtheoremenv[leftmargin=7, rightmargin=7, nobreak=true]{defn}{Def.\!\!}
+\renewcommand{\thedefn}{\relax}
+
+
+% Generic box
+\newtheoremstyle{cenbox}
+  {\topsep}%
+  {\topsep}%
+  {}%
+  {}%
+  {\bfseries}
+  {\\[.07cm]}
+  {.5em}%
+  {\thmnote{#3}}%
+\theoremstyle{cenbox}
+\newmdtheoremenv[leftmargin=7, rightmargin=7, nobreak=true]{centeredbox}{}
+\renewcommand{\thecenteredbox}{\relax}
+
+% Custom proof environment
+\newenvironment{myproof}[1][\proofname]{%
+  \begin{proof}[#1]$ $\par\nobreak\ignorespaces
+}{%
+  \par
+  \end{proof}
+}
+
+\titlespacing*{\subsubsection}{0pt}{1\baselineskip}{0.3\baselineskip}
+\newcommand{\oss}[1]{%
+\subsubsection*{#1}
+}
+
+%--------------------------------------------------
+% table and figure counter as {section}.{number} %
+%--------------------------------------------------
+\RequirePackage{chngcntr}
+
+%---- Hyperlinks to citations
+\hypersetup{
+	colorlinks,
+	linkcolor=black!50!black,
+	citecolor=blue!50!black,
+	urlcolor=blue!80!black
+}
+
+\RequirePackage{sectsty}
+\sectionfont{\centering\scshape\smaller}
+\subsectionfont{\smaller}
+
+%---- Suppress section numbering
+% \renewcommand{\thesection}{\hspace{-0.58cm}}
+% \renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
+
+% -- Remove space after hiding number
+% \makeatletter
+% \def\@seccntformat#1{\csname #1ignore\expandafter\endcsname\csname the#1\endcsname\quad}
+% \let\sectionignore\@gobbletwo
+% \let\latex@numberline\numberline
+% \def\numberline#1{\if\relax#1\relax\else\latex@numberline{#1}\fi}
+% \makeatother
+
+%-------------------------
+% Gilles Castel's figures
+%-------------------------
+\usepackage{import}
+\usepackage{pdfpages}
+\usepackage{transparent}
+\usepackage{xcolor}
+
+\newcommand{\incfig}[2][1]{%
+    \def\svgwidth{#1\textwidth}
+    \import{./figures/}{#2.pdf_tex}
+}
+
+\pdfsuppresswarningpagegroup=1
+% Smaller size pdfs
+\pdfminorversion=5
+\pdfobjcompresslevel=3 
+\pdfcompresslevel=9
+
+\author{Daniele Zago}
+\date{\today}
