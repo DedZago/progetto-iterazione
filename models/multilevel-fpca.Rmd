@@ -69,7 +69,7 @@ ypred = predict(fpca, Y_list, t_list)
 # Autofunzioni stimate
 eigenFPCA = fpca$phi                                 
 matplot(eigenFPCA, type = "l", main = "Funzioni principali")
-
+legend("topleft", legend=paste0("fPC ", 1:K), col=1:K,cex=0.8, fill=1:K)
 
 # Aggiungo le autofunzioni come covariate al dataset
 eigenColumns = NULL
