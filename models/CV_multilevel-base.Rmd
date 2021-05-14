@@ -8,9 +8,19 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+rm(list = ls())
 library(loo)
 library(rstanarm)
-load("../data/mandarino-proc.RData")
+library(dplyr)
+load("../data/mandarino.RData")
+mandarino$current = ifelse(mandarino$time <= 10, mandarino$syllable1, mandarino$syllable2)
+mandarino$current = levels(mandarino$syllable1)[mandarino$current]
+
+mandarino$peak = ifelse(mandarino$time >= 7 & mandarino$time <= 13, 1, 0)
+mandarino %>%
+    group_by_at(setdiff(colnames(mandarino), c("repetition", "f0"))) %>%
+    summarize(f0 = mean(f0)) %>%
+    ungroup() -> mandarino
 datasq  <- cbind(mandarino, time2 = mandarino$time^2)
 ```
 
