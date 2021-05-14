@@ -1,0 +1,135 @@
+---
+title: "CV_multilevel_base"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(loo)
+library(rstanarm)
+load("../data/mandarino-proc.RData")
+datasq  <- cbind(mandarino, time2 = mandarino$time^2)
+```
+
+L'idea è quella di partire da un modello abbastanza completo e selezionare le variabili andando a fare kfold o loo e scegliendo il modello che ha un errore di previsione di corss validazione più basso
+
+
+```{r}
+if(file.exists("fitStanLmer2.Rdata")){
+    load("fitStanLmer2.Rdata")
+} else{
+    fitStanLmer2 = stan_glmer(f0 ~ cog_load + time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:syllable1 + time:syllable2 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE)
+    save(fitStanLmer2, file="fitStanLmer2.Rdata")
+}
+
+# loo1 <- loo(fitStanLmer2)
+# loo1 # ok fa stra cagare 100% bad
+cores  = min(4, parallel::detectCores())
+set.seed(2021-05-13)
+kf1 <- kfold(fitStanLmer2, K = 10, cores = cores)
+```
+```{r}
+kf1
+```
+
+elpd_kfold	-33710.9	87.9		
+p_kfold	NA	NA		
+kfoldic	67421.8	175.8
+
+
+Tolgo la variabile cog_load:
+```{r}
+fitStanLmer3 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:syllable1 + time:syllable2 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE)
+#loo3 <- loo(fitStanLmer3)
+#loo3 # fa cagare 100%
+set.seed(2021-05-13)
+kf3 <- kfold(fitStanLmer3, K = 10, cores = cores)
+```
+```{r}
+kf3
+```
+            Estimate    SE
+elpd_kfold	-33722.7	83.7		
+p_kfold	NA	NA		
+kfoldic	67445.4	167.4	
+
+
+Tolgo l'effetto del time2 perchè ha il valore più basso:
+```{r}
+fitStanLmer4 = stan_glmer(f0 ~ time  + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:syllable1 + time:syllable2 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE)
+#loo4 <- loo(fitStanLmer4)
+#loo4 # fa cagare 100%
+set.seed(2021-05-13)
+kf4 <- kfold(fitStanLmer4, K = 10, cores = cores)
+```
+```{r}
+kf4
+```
+            Estimate    SE
+elpd_kfold	-33781.3	86.8		
+p_kfold	NA	NA		
+kfoldic	67562.6	173.7	
+
+Peggiora quindi tengo il tempo al quadrato.
+
+```{r}
+fitStanLmer5 = stan_glmer(f0 ~ time  + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:syllable1 + time:syllable2 + time:current + time:peak|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE)
+#loo5 <- loo(fitStanLmer5)
+#loo5 # fa cagare 100%
+set.seed(2021-05-13)
+kf5 <- kfold(fitStanLmer5, K = 10, cores = cores)
+```
+```{r}
+kf5
+```
+
+           Estimate    SE
+elpd_kfold	-33774.8	87.6		
+p_kfold	NA	NA		
+kfoldic	67549.6	175.2	
+è aumentato ancora.
+
+Provo a fare il migliore ma con gli effetti casuali che sono indipendenti a blocchi:
+```{r}
+fitStanLmer6 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE)
+#loo6 <- loo(fitStanLmer6)
+#loo6 # fa cagare 100%
+set.seed(2021-05-13)
+kf6 <- kfold(fitStanLmer6, K = 10, cores = cores)
+```
+```{r}
+kf6
+```
+ 
+            Estimate    SE
+elpd_kfold	-33186.9	92.8		
+p_kfold	NA	NA		
+kfoldic	66373.7	185.6	
+
+```{r}
+loo_compare(kf6, kf5, kf4, kf3, kf1)
+```
+
