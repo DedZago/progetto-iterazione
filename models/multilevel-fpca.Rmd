@@ -83,6 +83,46 @@ mandarino_fpca = cbind(mandarino, eigenColumns)
 colnames(mandarino_fpca) = c(colnames(mandarino), paste0("PC", 1:K))
 ```
 
+Verifico che la variabilità delle componenti principali non sia eccessiva, in modo che il modello successivo non stia "barando" nell'utilizzare le fpca stimate:
+```{r fpca_var}
+fpca_list = vector(mode = "list", length = length(unique(mandarino$subject)))
+i = 1
+for(subj in unique(mandarino$subject)){
+    idx = mandarino_wide$subject == subj
+    Y_sub = as.matrix(mandarino_wide[!idx , 5:(NCOL(mandarino_wide)) ])             # funzioni senza il soggetto
+    Y_list_sub = lapply(seq_len(NROW(Y_sub)), function(i) Y_sub[i,])
+    t_list_sub = lapply(seq_len(NROW(Y_sub)), function(i) 1:20)
+    fpca_list[[i]] = FPCA(Ly = Y_list_sub, Lt = t_list_sub, optns = list(FVEthreshold = fve))
+    i = i+1
+}
+
+plot_phi_list = function(fpca_list, m = 1){
+    # Plot delle funzioni principali sovrapposte da una lista di oggetti fpca
+    #
+    # @param fpca_list: lista di fpca
+    # @param m: ordine della funzione principale da plottare
+    #
+    # @return oggetto plot contenente il grafico sovrapposto delle fpc
+    
+    ymax = max(unlist(lapply(fpca_list, function(obj) max(obj$phi))))
+    ymin = min(unlist(lapply(fpca_list, function(obj) min(obj$phi))))
+
+    plot(fpca_list[[1]]$obsGrid, ylim = c(ymin, ymax), type = "n", xlab = "t", ylab = "f0", main = paste0("fPC ", m))
+    for(i in 1:length(fpca_list)){
+        lines(fpca_list[[i]]$obsGrid, fpca_list[[i]]$phi[ , m ])
+    }
+}
+
+par(mfrow = c(2,2))
+plot_phi_list(fpca_list, 1)
+plot_phi_list(fpca_list, 2)
+plot_phi_list(fpca_list, 3)
+plot_phi_list(fpca_list, 4)
+par(mfrow = c(1,1))
+
+```
+
+
 ```{r pred_plot, echo=FALSE}
 # --------------------------------------------
 # Funzioni per fare i grafici delle previsioni
@@ -201,7 +241,7 @@ ppc_full(mandarino, ypred)
 
 ## Selezione effetti fissi e casuali con LOOCV 
 
-```{r effetti fissi}
+```{r effetti_fissi}
 cores  = min(4, parallel::detectCores())
 library(loo)
 
@@ -236,7 +276,5 @@ summary(fitStanLmerFpca1)
 loo1 <- loo(fitStanLmerFpca1, cores = cores) # warnings?
 loo1$estimates
 #k1 <- kfold(fitStanLmerFpca1, K = 10, cores = cores, verbose = T) RIP si impianta
-
-
 ```
 
