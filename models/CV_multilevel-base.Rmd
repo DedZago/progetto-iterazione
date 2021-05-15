@@ -43,11 +43,12 @@ if(file.exists("fitStanLmer2.Rdata")){
 # loo1 <- loo(fitStanLmer2)
 # loo1 # ok fa stra cagare 100% bad
 cores  = min(4, parallel::detectCores())
-if(file.exists("cv_multilevel_base.RData")){
-    load("cv_multilevel_base.RData")
+if(file.exists("../models/multilevel-base_files/kf1.RData")){
+    load("../models/multilevel-base_files/kf1.RData")
 }else{
     set.seed(2021-05-13)
     kf1 <- kfold(fitStanLmer2, K = 10, cores = cores)
+    save(kf1, file = "../models/multilevel-base_files/kf1.RData")
 }
 
 ```
@@ -71,11 +72,12 @@ fitStanLmer3 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:cur
                             )
 #loo3 <- loo(fitStanLmer3)
 #loo3 # fa cagare 100%
-if(file.exists("cv_multilevel_base.RData")){
-    load("cv_multilevel_base.RData")
+if(file.exists("../models/multilevel-base_files/kf3.RData")){
+    load("../models/multilevel-base_files/kf3.RData")
 }else{
     set.seed(2021-05-13)
     kf3 <- kfold(fitStanLmer3, K = 10, cores = cores)
+    save(kf3, file = "../models/multilevel-base_files/kf3.RData")
 }
 
 ```
@@ -98,11 +100,12 @@ fitStanLmer4 = stan_glmer(f0 ~ time  + current + time:current + time2:current + 
                          seed = 2021-05-13)
 #loo4 <- loo(fitStanLmer4)
 #loo4 # fa cagare 100%
-if(file.exists("cv_multilevel_base.RData")){
-    load("cv_multilevel_base.RData")
+if(file.exists("../models/multilevel-base_files/kf4.RData")){
+    load("../models/multilevel-base_files/kf4.RData")
 }else{
     set.seed(2021-05-13)
     kf4 <- kfold(fitStanLmer4, K = 10, cores = cores)
+    save(kf4, file = "../models/multilevel-base_files/kf4.RData")
 }
 
 ```
@@ -124,11 +127,12 @@ fitStanLmer5 = stan_glmer(f0 ~ time  + current + time:current + time2:current + 
                          seed = 2021-05-13)
 #loo5 <- loo(fitStanLmer5)
 #loo5 # fa cagare 100%
-if(file.exists("cv_multilevel_base.RData")){
-    load("cv_multilevel_base.RData")
+if(file.exists("../models/multilevel-base_files/kf5.RData")){
+    load("../models/multilevel-base_files/kf5.RData")
 }else{
     set.seed(2021-05-13)
-   kf5 <- kfold(fitStanLmer5, K = 10, cores = cores)
+    kf5 <- kfold(fitStanLmer5, K = 10, cores = cores)
+    save(kf5, file = "../models/multilevel-base_files/kf5.RData")
 }
 
 ```
@@ -152,11 +156,12 @@ fitStanLmer6 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:cur
                          seed = 2021-05-13)
 #loo6 <- loo(fitStanLmer6)
 #loo6 # fa cagare 100%
-if(file.exists("cv_multilevel_base.RData")){
-    load("cv_multilevel_base.RData")
+if(file.exists("../models/multilevel-base_files/kf6.RData")){
+    load("../models/multilevel-base_files/kf6.RData")
 }else{
     set.seed(2021-05-13)
-   kf6 <- kfold(fitStanLmer6, K = 10, cores = cores)
+    kf6 <- kfold(fitStanLmer6, K = 10, cores = cores)
+    save(kf6, file = "../models/multilevel-base_files/kf6.RData")
 }
 
 ```
@@ -169,10 +174,115 @@ elpd_kfold	-33395.4	91.9
 p_kfold	NA	NA		
 kfoldic	66790.7	183.9
 
+
+Provo a togliere qualche effetto casuale dato che hano tutti valori molto bassi, esclusa l'intercetta:
 ```{r}
-loo_compare(kf6, kf5, kf4, kf3, kf1)
+fitStanLmer7 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+#loo6 <- loo(fitStanLmer7)
+#loo6 # fa cagare 100%
+if(file.exists("../models/multilevel-base_files/kf7.RData")){
+    load("../models/multilevel-base_files/kf7.RData")
+}else{
+    set.seed(2021-05-13)
+    kf7 <- kfold(fitStanLmer7, K = 10, cores = cores)
+    save(kf7, file = "../models/multilevel-base_files/kf7.RData")
+}
 ```
 ```{r}
-#save(kf6, kf5, kf4, kf3, kf1, file = "cv_multilevel_base.RData")
+kf7
+```
+elpd_kfold	-33532.1	90.7		
+p_kfold	NA	NA		
+kfoldic	67064.2	181.4	
+
+```{r}
+fitStanLmer8 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:current + time:peak|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+#loo6 <- loo(fitStanLmer7)
+#loo6 # fa cagare 100%
+if(file.exists("../models/multilevel-base_files/kf8.RData")){
+    load("../models/multilevel-base_files/kf8.RData")
+}else{
+    set.seed(2021-05-13)
+    kf8 <- kfold(fitStanLmer8, K = 10, cores = cores)
+    save(kf8, file = "../models/multilevel-base_files/kf8.RData")
+}
+```
+```{r}
+kf8
+```
+elpd_kfold	-33531.4	85.9		
+p_kfold	NA	NA		
+kfoldic	67062.7	171.8
+
+
+```{r}
+fitStanLmer9 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + time:syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject) + (0 + time:peak),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+#loo6 <- loo(fitStanLmer7)
+#loo6 # fa cagare 100%
+if(file.exists("../models/multilevel-base_files/kf9.RData")){
+    load("../models/multilevel-base_files/kf9.RData")
+}else{
+    set.seed(2021-05-13)
+    kf9 <- kfold(fitStanLmer9, K = 10, cores = cores)
+    save(kf9, file = "../models/multilevel-base_files/kf9.RData")
+}
+```
+```{r}
+kf9
+```
+           Estimate    SE
+elpd_kfold -33441.4  93.9
+p_kfold          NA    NA
+kfoldic     66882.7 187.7
+
+
+tolgo time2 dal modello migliore (fitstanlmer6)
+```{r}
+fitStanLmer10 = stan_glmer(f0 ~ time + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+#loo10 <- loo(fitStanLmer10)
+#loo10 # fa cagare 100%
+if(file.exists("../models/multilevel-base_files/kf10.RData")){
+    load("../models/multilevel-base_files/kf10.RData")
+}else{
+    set.seed(2021-05-13)
+    kf10 <- kfold(fitStanLmer10, K = 10, cores = cores)
+    save(kf10, file = "../models/multilevel-base_files/kf10.RData")
+}
+
+```
+```{r}
+kf10
+```
+           Estimate    SE
+elpd_kfold -33160.6  90.6
+p_kfold          NA    NA
+kfoldic     66321.2 181.2
+
+```{r}
+loo_compare(kf10, kf9, kf8, kf7, kf6, kf5, kf4, kf3, kf1)
+```
+
+```{r}
+#save(kf6, kf5, kf4, kf3, kf1, file = "../models/multilevel-base_files/cv_multilevel_base.RData")
 ```
 

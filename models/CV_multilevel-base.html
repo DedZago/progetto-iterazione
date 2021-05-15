@@ -218,11 +218,12 @@ mandarino %&gt;%
 <pre class="r"><code># loo1 &lt;- loo(fitStanLmer2)
 # loo1 # ok fa stra cagare 100% bad
 cores  = min(4, parallel::detectCores())
-if(file.exists(&quot;cv_multilevel_base.RData&quot;)){
-    load(&quot;cv_multilevel_base.RData&quot;)
+if(file.exists(&quot;../models/multilevel-base_files/kf1.RData&quot;)){
+    load(&quot;../models/multilevel-base_files/kf1.RData&quot;)
 }else{
     set.seed(2021-05-13)
     kf1 &lt;- kfold(fitStanLmer2, K = 10, cores = cores)
+    save(kf1, file = &quot;../models/multilevel-base_files/kf1.RData&quot;)
 }</code></pre>
 <pre class="r"><code>kf1</code></pre>
 <pre><code>## 
@@ -251,8 +252,8 @@ kfoldic 69357.7 174.4</p>
 ## Chain 1: 
 ## Chain 1: 
 ## Chain 1: 
-## Chain 1: Gradient evaluation took 0.004 seconds
-## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 40 seconds.
+## Chain 1: Gradient evaluation took 0.008 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 80 seconds.
 ## Chain 1: Adjust your expectations accordingly!
 ## Chain 1: 
 ## Chain 1: 
@@ -376,11 +377,12 @@ kfoldic 69357.7 174.4</p>
 ## Otherwise consider using sampling instead.</code></pre>
 <pre class="r"><code>#loo3 &lt;- loo(fitStanLmer3)
 #loo3 # fa cagare 100%
-if(file.exists(&quot;cv_multilevel_base.RData&quot;)){
-    load(&quot;cv_multilevel_base.RData&quot;)
+if(file.exists(&quot;../models/multilevel-base_files/kf3.RData&quot;)){
+    load(&quot;../models/multilevel-base_files/kf3.RData&quot;)
 }else{
     set.seed(2021-05-13)
     kf3 &lt;- kfold(fitStanLmer3, K = 10, cores = cores)
+    save(kf3, file = &quot;../models/multilevel-base_files/kf3.RData&quot;)
 }</code></pre>
 <pre class="r"><code>kf3</code></pre>
 <pre><code>## 
@@ -409,8 +411,8 @@ kfoldic 66844.7 183.4</p>
 ## Chain 1: 
 ## Chain 1: 
 ## Chain 1: 
-## Chain 1: Gradient evaluation took 0.007 seconds
-## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 70 seconds.
+## Chain 1: Gradient evaluation took 0.003 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 30 seconds.
 ## Chain 1: Adjust your expectations accordingly!
 ## Chain 1: 
 ## Chain 1: 
@@ -534,11 +536,12 @@ kfoldic 66844.7 183.4</p>
 ## Otherwise consider using sampling instead.</code></pre>
 <pre class="r"><code>#loo4 &lt;- loo(fitStanLmer4)
 #loo4 # fa cagare 100%
-if(file.exists(&quot;cv_multilevel_base.RData&quot;)){
-    load(&quot;cv_multilevel_base.RData&quot;)
+if(file.exists(&quot;../models/multilevel-base_files/kf4.RData&quot;)){
+    load(&quot;../models/multilevel-base_files/kf4.RData&quot;)
 }else{
     set.seed(2021-05-13)
     kf4 &lt;- kfold(fitStanLmer4, K = 10, cores = cores)
+    save(kf4, file = &quot;../models/multilevel-base_files/kf4.RData&quot;)
 }</code></pre>
 <pre class="r"><code>kf4</code></pre>
 <pre><code>## 
@@ -566,8 +569,8 @@ kfoldic 66803.8 191.2</p>
 ## Chain 1: 
 ## Chain 1: 
 ## Chain 1: 
-## Chain 1: Gradient evaluation took 0.003 seconds
-## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 30 seconds.
+## Chain 1: Gradient evaluation took 0.015 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 150 seconds.
 ## Chain 1: Adjust your expectations accordingly!
 ## Chain 1: 
 ## Chain 1: 
@@ -692,11 +695,12 @@ kfoldic 66803.8 191.2</p>
 ## Otherwise consider using sampling instead.</code></pre>
 <pre class="r"><code>#loo5 &lt;- loo(fitStanLmer5)
 #loo5 # fa cagare 100%
-if(file.exists(&quot;cv_multilevel_base.RData&quot;)){
-    load(&quot;cv_multilevel_base.RData&quot;)
+if(file.exists(&quot;../models/multilevel-base_files/kf5.RData&quot;)){
+    load(&quot;../models/multilevel-base_files/kf5.RData&quot;)
 }else{
     set.seed(2021-05-13)
-   kf5 &lt;- kfold(fitStanLmer5, K = 10, cores = cores)
+    kf5 &lt;- kfold(fitStanLmer5, K = 10, cores = cores)
+    save(kf5, file = &quot;../models/multilevel-base_files/kf5.RData&quot;)
 }</code></pre>
 <pre class="r"><code>kf5</code></pre>
 <pre><code>## 
@@ -725,8 +729,8 @@ kfoldic 67176.4 151.6</p>
 ## Chain 1: 
 ## Chain 1: 
 ## Chain 1: 
-## Chain 1: Gradient evaluation took 0.004 seconds
-## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 40 seconds.
+## Chain 1: Gradient evaluation took 0.003 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 30 seconds.
 ## Chain 1: Adjust your expectations accordingly!
 ## Chain 1: 
 ## Chain 1: 
@@ -850,11 +854,12 @@ kfoldic 67176.4 151.6</p>
 ## Otherwise consider using sampling instead.</code></pre>
 <pre class="r"><code>#loo6 &lt;- loo(fitStanLmer6)
 #loo6 # fa cagare 100%
-if(file.exists(&quot;cv_multilevel_base.RData&quot;)){
-    load(&quot;cv_multilevel_base.RData&quot;)
+if(file.exists(&quot;../models/multilevel-base_files/kf6.RData&quot;)){
+    load(&quot;../models/multilevel-base_files/kf6.RData&quot;)
 }else{
     set.seed(2021-05-13)
-   kf6 &lt;- kfold(fitStanLmer6, K = 10, cores = cores)
+    kf6 &lt;- kfold(fitStanLmer6, K = 10, cores = cores)
+    save(kf6, file = &quot;../models/multilevel-base_files/kf6.RData&quot;)
 }</code></pre>
 <pre class="r"><code>kf6</code></pre>
 <pre><code>## 
@@ -868,14 +873,647 @@ if(file.exists(&quot;cv_multilevel_base.RData&quot;)){
 <p>elpd_kfold -33395.4 91.9<br />
 p_kfold NA NA<br />
 kfoldic 66790.7 183.9</p>
-<pre class="r"><code>loo_compare(kf6, kf5, kf4, kf3, kf1)</code></pre>
-<pre><code>##              elpd_diff se_diff
-## fitStanLmer6     0.0       0.0
-## fitStanLmer4    -6.6      46.2
-## fitStanLmer3   -27.0      49.8
-## fitStanLmer5  -192.8      50.1
-## fitStanLmer2 -1283.5      67.2</code></pre>
-<pre class="r"><code>save(kf6, kf5, kf4, kf3, kf1, file = &quot;cv_multilevel_base.RData&quot;)</code></pre>
+<p>Provo a togliere qualche effetto casuale dato che hano tutti valori molto bassi, esclusa l’intercetta:</p>
+<pre class="r"><code>fitStanLmer7 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = &quot;meanfield&quot;,
+                         QR = TRUE,
+                         seed = 2021-05-13)</code></pre>
+<pre><code>## Chain 1: ------------------------------------------------------------
+## Chain 1: EXPERIMENTAL ALGORITHM:
+## Chain 1:   This procedure has not been thoroughly tested and may be unstable
+## Chain 1:   or buggy. The interface is subject to change.
+## Chain 1: ------------------------------------------------------------
+## Chain 1: 
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Gradient evaluation took 0.003 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 30 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Begin eta adaptation.
+## Chain 1: Iteration:   1 / 250 [  0%]  (Adaptation)
+## Chain 1: Iteration:  50 / 250 [ 20%]  (Adaptation)
+## Chain 1: Iteration: 100 / 250 [ 40%]  (Adaptation)
+## Chain 1: Iteration: 150 / 250 [ 60%]  (Adaptation)
+## Chain 1: Iteration: 200 / 250 [ 80%]  (Adaptation)
+## Chain 1: Success! Found best value [eta = 1] earlier than expected.
+## Chain 1: 
+## Chain 1: Begin stochastic gradient ascent.
+## Chain 1:   iter             ELBO   delta_ELBO_mean   delta_ELBO_med   notes 
+## Chain 1:    100  -135717468320282672.000             1.000            1.000
+## Chain 1:    200  -41672057511658.922          1628.399         3255.798
+## Chain 1:    300  -1566199553167637760.000          1085.933            1.000
+## Chain 1:    400  -111082206539046.969          4339.065         3255.798
+## Chain 1:    500  -6348763720249181.000          3471.449            1.000
+## Chain 1:    600  -105981583174284416.000          2893.031            1.000
+## Chain 1:    700  -245477877799797056.000          2479.822            1.000
+## Chain 1:    800  -3484206958626258550784.000          2169.969            1.000
+## Chain 1:    900  -3891604862423926.500        101408.045            1.000
+## Chain 1:   1000  -40516879781950896.000         91267.331            1.000
+## Chain 1:   1100  -19717477573618644.000         91267.336            1.000   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1200  -90976314399998476288.000         90941.856            1.000   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1300  -2274152062620827385856.000         90941.852            1.000   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1400  -11968650256678.488      19090438.557            1.000   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1500  -136003047806934720.000      19090438.559            1.000   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1600  -375337448711882.812      19090474.599            1.000   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1700  -13166057956328.447      19090477.293            1.055   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1800  -36964372312.769      19090512.712           27.508   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1900  -43361777066.783      19000981.461            1.055   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2000  -4435037358.706      19000982.249            8.777   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2100  -3101140819307981.000      19000982.243            8.777   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2200     -1812561.932     190092560.506           27.508   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2300     -6511011.010     190092560.483           27.508   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2400    -79698813.763     171091654.024            8.777   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2500    -66937548.991     171091653.943            8.777   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2600     -1004227.880     171091624.373            8.777   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2700      -480353.795     171091621.732            1.091   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2800       -72459.165     171091586.776            1.091   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   2900       -41419.368     171091586.837            1.091   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   3000       -71488.180     171091586.001            1.000   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   3100       -35209.318     171091586.004            1.030   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   3200       -35119.006             7.641            0.918   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   3300       -35215.575             7.569            0.918   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   3400       -34800.972             7.478            0.749   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   3500       -34600.201             7.460            0.749   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   3600       -34399.136             0.895            0.421   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   3700       -34469.989             0.786            0.012   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   3800       -34515.669             0.223            0.006
+## Chain 1:   3900       -34535.458             0.148            0.006
+## Chain 1:   4000       -34572.972             0.106            0.003
+## Chain 1:   4100       -34458.359             0.004            0.003
+## Chain 1:   4200       -34461.143             0.003            0.003
+## Chain 1:   4300       -34275.168             0.004            0.003
+## Chain 1:   4400       -34470.215             0.003            0.003
+## Chain 1:   4500       -34553.818             0.003            0.002
+## Chain 1:   4600       -34385.125             0.003            0.002
+## Chain 1:   4700       -34371.985             0.003            0.002
+## Chain 1:   4800       -34441.945             0.003            0.002
+## Chain 1:   4900       -34372.859             0.003            0.002
+## Chain 1:   5000       -34446.098             0.003            0.002
+## Chain 1:   5100       -34093.091             0.004            0.002
+## Chain 1:   5200       -34501.912             0.005            0.005
+## Chain 1:   5300       -34376.266             0.005            0.004
+## Chain 1:   5400       -34347.524             0.004            0.002
+## Chain 1:   5500       -34300.258             0.004            0.002
+## Chain 1:   5600       -34507.708             0.004            0.002
+## Chain 1:   5700       -34414.215             0.004            0.003
+## Chain 1:   5800       -34314.780             0.004            0.003
+## Chain 1:   5900       -34417.331             0.004            0.003
+## Chain 1:   6000       -34093.577             0.005            0.004
+## Chain 1:   6100       -34241.520             0.005            0.004
+## Chain 1:   6200       -34306.392             0.004            0.003
+## Chain 1:   6300       -34364.930             0.003            0.003
+## Chain 1:   6400       -34285.645             0.004            0.003
+## Chain 1:   6500       -34186.724             0.004            0.003
+## Chain 1:   6600       -34160.112             0.003            0.003
+## Chain 1:   6700       -34205.184             0.003            0.003
+## Chain 1:   6800       -34139.419             0.003            0.002
+## Chain 1:   6900       -34270.996             0.003            0.002
+## Chain 1:   7000       -34167.877             0.002            0.002
+## Chain 1:   7100       -33922.845             0.003            0.002
+## Chain 1:   7200       -34031.579             0.003            0.003
+## Chain 1:   7300       -34112.308             0.003            0.003
+## Chain 1:   7400       -33957.851             0.003            0.003
+## Chain 1:   7500       -33980.427             0.003            0.003
+## Chain 1:   7600       -33970.859             0.003            0.003
+## Chain 1:   7700       -34116.140             0.003            0.003
+## Chain 1:   7800       -34143.946             0.003            0.003
+## Chain 1:   7900       -34151.065             0.003            0.003
+## Chain 1:   8000       -33928.149             0.003            0.003
+## Chain 1:   8100       -33995.701             0.002            0.002
+## Chain 1:   8200       -34126.775             0.003            0.002
+## Chain 1:   8300       -34136.138             0.002            0.002
+## Chain 1:   8400       -34112.233             0.002            0.001
+## Chain 1:   8500       -34006.972             0.002            0.002
+## Chain 1:   8600       -33991.962             0.002            0.002
+## Chain 1:   8700       -34023.037             0.002            0.001
+## Chain 1:   8800       -33976.961             0.002            0.001
+## Chain 1:   8900       -34027.924             0.002            0.001
+## Chain 1:   9000       -34116.482             0.002            0.001
+## Chain 1:   9100       -34007.286             0.002            0.001
+## Chain 1:   9200       -34032.862             0.001            0.001
+## Chain 1:   9300       -34114.728             0.002            0.001
+## Chain 1:   9400       -33848.064             0.002            0.002
+## Chain 1:   9500       -34118.202             0.003            0.002
+## Chain 1:   9600       -34033.411             0.003            0.002
+## Chain 1:   9700       -33967.445             0.003            0.002
+## Chain 1:   9800       -34091.957             0.003            0.003
+## Chain 1:   9900       -34095.890             0.003            0.003
+## Chain 1:   10000       -34208.162             0.003            0.003
+## Chain 1: Informational Message: The maximum number of iterations is reached! The algorithm may not have converged.
+## Chain 1: This variational approximation is not guaranteed to be meaningful.
+## Chain 1: 
+## Chain 1: Drawing a sample of size 1000 from the approximate posterior... 
+## Chain 1: COMPLETED.</code></pre>
+<pre><code>## Warning: Pareto k diagnostic value is 17.47. Resampling is disabled. Decreasing
+## tol_rel_obj may help if variational algorithm has terminated prematurely.
+## Otherwise consider using sampling instead.</code></pre>
+<pre class="r"><code>#loo6 &lt;- loo(fitStanLmer7)
+#loo6 # fa cagare 100%
+if(file.exists(&quot;../models/multilevel-base_files/kf7.RData&quot;)){
+    load(&quot;../models/multilevel-base_files/kf7.RData&quot;)
+}else{
+    set.seed(2021-05-13)
+    kf7 &lt;- kfold(fitStanLmer7, K = 10, cores = cores)
+    save(kf7, file = &quot;../models/multilevel-base_files/kf7.RData&quot;)
+}</code></pre>
+<pre class="r"><code>kf7</code></pre>
+<pre><code>## 
+## Based on 10-fold cross-validation
+## 
+##            Estimate    SE
+## elpd_kfold -33532.1  90.7
+## p_kfold          NA    NA
+## kfoldic     67064.2 181.4</code></pre>
+<p>elpd_kfold -33532.1 90.7<br />
+p_kfold NA NA<br />
+kfoldic 67064.2 181.4</p>
+<pre class="r"><code>fitStanLmer8 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:current + time:peak|subject),
+                         data = datasq,
+                         algorithm = &quot;meanfield&quot;,
+                         QR = TRUE,
+                         seed = 2021-05-13)</code></pre>
+<pre><code>## Chain 1: ------------------------------------------------------------
+## Chain 1: EXPERIMENTAL ALGORITHM:
+## Chain 1:   This procedure has not been thoroughly tested and may be unstable
+## Chain 1:   or buggy. The interface is subject to change.
+## Chain 1: ------------------------------------------------------------
+## Chain 1: 
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Gradient evaluation took 0.002 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 20 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Begin eta adaptation.
+## Chain 1: Iteration:   1 / 250 [  0%]  (Adaptation)
+## Chain 1: Iteration:  50 / 250 [ 20%]  (Adaptation)
+## Chain 1: Iteration: 100 / 250 [ 40%]  (Adaptation)
+## Chain 1: Iteration: 150 / 250 [ 60%]  (Adaptation)
+## Chain 1: Iteration: 200 / 250 [ 80%]  (Adaptation)
+## Chain 1: Success! Found best value [eta = 1] earlier than expected.
+## Chain 1: 
+## Chain 1: Begin stochastic gradient ascent.
+## Chain 1:   iter             ELBO   delta_ELBO_mean   delta_ELBO_med   notes 
+## Chain 1:    100      -299457.592             1.000            1.000
+## Chain 1:    200    -37608700.389             0.996            1.000
+## Chain 1:    300       -56243.460           223.223            1.000
+## Chain 1:    400       -45874.647           167.474            1.000
+## Chain 1:    500       -40927.402           134.003            0.992
+## Chain 1:    600       -39913.047           111.674            0.992
+## Chain 1:    700       -40251.016            95.721            0.226
+## Chain 1:    800       -38897.273            83.761            0.226
+## Chain 1:    900       -39152.973            74.455            0.121
+## Chain 1:   1000       -38827.746            67.010            0.121
+## Chain 1:   1100       -37178.210            66.914            0.044   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1200       -37796.529            66.817            0.035   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1300       -37011.810             0.051            0.025
+## Chain 1:   1400       -36102.898             0.031            0.025
+## Chain 1:   1500       -39293.999             0.027            0.025
+## Chain 1:   1600       -37035.497             0.031            0.025
+## Chain 1:   1700       -35937.941             0.033            0.031
+## Chain 1:   1800       -35996.752             0.030            0.025
+## Chain 1:   1900       -36150.420             0.029            0.025
+## Chain 1:   2000       -37388.789             0.032            0.031
+## Chain 1:   2100       -35616.170             0.032            0.031
+## Chain 1:   2200       -36366.809             0.033            0.031
+## Chain 1:   2300       -36299.656             0.031            0.031
+## Chain 1:   2400       -35909.989             0.029            0.031
+## Chain 1:   2500       -35727.399             0.022            0.021
+## Chain 1:   2600       -35814.895             0.016            0.011
+## Chain 1:   2700       -35649.487             0.013            0.005
+## Chain 1:   2800       -35481.276             0.014            0.005
+## Chain 1:   2900       -35735.825             0.014            0.007
+## Chain 1:   3000       -35326.370             0.012            0.007
+## Chain 1:   3100       -36342.612             0.010            0.007
+## Chain 1:   3200       -34903.542             0.012            0.007
+## Chain 1:   3300       -35105.272             0.012            0.007
+## Chain 1:   3400       -35058.391             0.011            0.006
+## Chain 1:   3500       -35047.369             0.011            0.006
+## Chain 1:   3600       -35063.094             0.011            0.006
+## Chain 1:   3700       -34641.976             0.011            0.007
+## Chain 1:   3800       -34923.056             0.012            0.008
+## Chain 1:   3900       -34716.624             0.011            0.008
+## Chain 1:   4000       -34732.704             0.010            0.006
+## Chain 1:   4100       -36052.404             0.011            0.006
+## Chain 1:   4200       -34823.246             0.011            0.006
+## Chain 1:   4300       -35515.379             0.012            0.008
+## Chain 1:   4400       -35565.862             0.012            0.008
+## Chain 1:   4500       -35010.476             0.014            0.012
+## Chain 1:   4600       -34720.998             0.014            0.012
+## Chain 1:   4700       -34838.711             0.013            0.008
+## Chain 1:   4800       -34747.946             0.013            0.008
+## Chain 1:   4900       -34706.219             0.012            0.008
+## Chain 1:   5000       -35119.426             0.014            0.012
+## Chain 1:   5100       -35028.527             0.010            0.008
+## Chain 1:   5200       -34585.823             0.008            0.008
+## Chain 1:   5300       -34516.901             0.006            0.003
+## Chain 1:   5400       -34598.694             0.006            0.003
+## Chain 1:   5500       -34699.409             0.005            0.003
+## Chain 1:   5600       -34753.194             0.004            0.003
+## Chain 1:   5700       -34665.017             0.004            0.003
+## Chain 1:   5800       -34711.501             0.004            0.003
+## Chain 1:   5900       -34907.559             0.005            0.003
+## Chain 1:   6000       -34918.784             0.003            0.003
+## Chain 1:   6100       -34520.068             0.004            0.003
+## Chain 1:   6200       -34675.086             0.003            0.003
+## Chain 1:   6300       -34465.244             0.004            0.003
+## Chain 1:   6400       -34866.306             0.005            0.004
+## Chain 1:   6500       -34439.073             0.006            0.006
+## Chain 1:   6600       -34463.851             0.006            0.006
+## Chain 1:   6700       -34741.149             0.006            0.006
+## Chain 1:   6800       -34391.118             0.007            0.008
+## Chain 1:   6900       -34317.679             0.007            0.008
+## Chain 1:   7000       -34641.312             0.008            0.009
+## Chain 1:   7100       -34692.825             0.007            0.008
+## Chain 1:   7200       -34456.724             0.007            0.008
+## Chain 1:   7300       -34438.554             0.006            0.008
+## Chain 1:   7400       -34399.147             0.005            0.007
+## Chain 1:   7500       -34212.677             0.005            0.005
+## Chain 1:   7600       -34448.008             0.005            0.007
+## Chain 1:   7700       -34499.034             0.005            0.005
+## Chain 1:   7800       -34794.315             0.004            0.005
+## Chain 1:   7900       -34394.333             0.005            0.007
+## Chain 1:   8000       -34701.523             0.005            0.007
+## Chain 1:   8100       -34311.009             0.006            0.007
+## Chain 1:   8200       -34441.225             0.006            0.007
+## Chain 1:   8300       -34144.414             0.007            0.008
+## Chain 1:   8400       -34586.205             0.008            0.009
+## Chain 1:   8500       -34759.286             0.008            0.009
+## Chain 1:   8600       -34367.903             0.008            0.009
+## Chain 1:   8700       -34625.713             0.009            0.009
+## Chain 1:   8800       -34419.153             0.009            0.009
+## Chain 1:   8900       -34299.089             0.008            0.009
+## Chain 1:   9000       -34350.201             0.007            0.007
+## Chain 1:   9100       -34120.580             0.007            0.007
+## Chain 1:   9200       -34332.868             0.007            0.007
+## Chain 1:   9300       -34336.795             0.006            0.006
+## Chain 1:   9400       -34335.985             0.005            0.006
+## Chain 1:   9500       -34307.390             0.004            0.006
+## Chain 1:   9600       -34353.104             0.003            0.004
+## Chain 1:   9700       -34315.415             0.003            0.001
+## Chain 1:   9800       -34264.060             0.002            0.001
+## Chain 1:   9900       -34339.357             0.002            0.001
+## Chain 1:   10000       -34357.911             0.002            0.001
+## Chain 1: Informational Message: The maximum number of iterations is reached! The algorithm may not have converged.
+## Chain 1: This variational approximation is not guaranteed to be meaningful.
+## Chain 1: 
+## Chain 1: Drawing a sample of size 1000 from the approximate posterior... 
+## Chain 1: COMPLETED.</code></pre>
+<pre><code>## Warning: Pareto k diagnostic value is 18.47. Resampling is disabled. Decreasing
+## tol_rel_obj may help if variational algorithm has terminated prematurely.
+## Otherwise consider using sampling instead.</code></pre>
+<pre class="r"><code>#loo6 &lt;- loo(fitStanLmer7)
+#loo6 # fa cagare 100%
+if(file.exists(&quot;../models/multilevel-base_files/kf8.RData&quot;)){
+    load(&quot;../models/multilevel-base_files/kf8.RData&quot;)
+}else{
+    set.seed(2021-05-13)
+    kf8 &lt;- kfold(fitStanLmer8, K = 10, cores = cores)
+    save(kf8, file = &quot;../models/multilevel-base_files/kf8.RData&quot;)
+}</code></pre>
+<pre class="r"><code>kf8</code></pre>
+<pre><code>## 
+## Based on 10-fold cross-validation
+## 
+##            Estimate    SE
+## elpd_kfold -33531.4  85.9
+## p_kfold          NA    NA
+## kfoldic     67062.7 171.8</code></pre>
+<p>elpd_kfold -33531.4 85.9<br />
+p_kfold NA NA<br />
+kfoldic 67062.7 171.8</p>
+<pre class="r"><code>fitStanLmer9 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + time:syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject) + (0 + time:peak),
+                         data = datasq,
+                         algorithm = &quot;meanfield&quot;,
+                         QR = TRUE,
+                         seed = 2021-05-13)</code></pre>
+<pre><code>## Chain 1: ------------------------------------------------------------
+## Chain 1: EXPERIMENTAL ALGORITHM:
+## Chain 1:   This procedure has not been thoroughly tested and may be unstable
+## Chain 1:   or buggy. The interface is subject to change.
+## Chain 1: ------------------------------------------------------------
+## Chain 1: 
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Gradient evaluation took 0 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Begin eta adaptation.
+## Chain 1: Iteration:   1 / 250 [  0%]  (Adaptation)
+## Chain 1: Iteration:  50 / 250 [ 20%]  (Adaptation)
+## Chain 1: Iteration: 100 / 250 [ 40%]  (Adaptation)
+## Chain 1: Iteration: 150 / 250 [ 60%]  (Adaptation)
+## Chain 1: Iteration: 200 / 250 [ 80%]  (Adaptation)
+## Chain 1: Success! Found best value [eta = 1] earlier than expected.
+## Chain 1: 
+## Chain 1: Begin stochastic gradient ascent.
+## Chain 1:   iter             ELBO   delta_ELBO_mean   delta_ELBO_med   notes 
+## Chain 1:    100       -58783.382             1.000            1.000
+## Chain 1:    200       -42944.199             0.684            1.000
+## Chain 1:    300       -37824.518             0.501            0.369
+## Chain 1:    400       -37948.954             0.377            0.369
+## Chain 1:    500       -39639.253             0.310            0.135
+## Chain 1:    600       -37992.304             0.266            0.135
+## Chain 1:    700       -36483.471             0.234            0.043
+## Chain 1:    800       -36033.474             0.206            0.043
+## Chain 1:    900       -36276.035             0.184            0.043
+## Chain 1:   1000       -35768.038             0.167            0.043
+## Chain 1:   1100       -35516.672             0.068            0.041
+## Chain 1:   1200       -35809.033             0.031            0.014
+## Chain 1:   1300       -36287.417             0.019            0.013
+## Chain 1:   1400       -35535.657             0.021            0.014
+## Chain 1:   1500       -35048.181             0.018            0.014
+## Chain 1:   1600       -35437.838             0.015            0.013
+## Chain 1:   1700       -35182.282             0.012            0.012
+## Chain 1:   1800       -34914.298             0.011            0.011
+## Chain 1:   1900       -35138.288             0.011            0.011
+## Chain 1:   2000       -35007.738             0.010            0.008
+## Chain 1:   2100       -34937.600             0.009            0.008
+## Chain 1:   2200       -35095.249             0.009            0.008
+## Chain 1:   2300       -34826.721             0.009            0.008
+## Chain 1:   2400       -34999.154             0.007            0.007
+## Chain 1:   2500       -34727.217             0.006            0.007
+## Chain 1:   2600       -34834.036             0.006            0.006
+## Chain 1:   2700       -34985.283             0.005            0.005
+## Chain 1:   2800       -34689.137             0.005            0.005
+## Chain 1:   2900       -34876.843             0.005            0.005
+## Chain 1:   3000       -34475.061             0.006            0.005
+## Chain 1:   3100       -34590.477             0.006            0.005
+## Chain 1:   3200       -34849.867             0.006            0.007
+## Chain 1:   3300       -34475.045             0.007            0.007
+## Chain 1:   3400       -34542.146             0.006            0.007
+## Chain 1:   3500       -34649.780             0.006            0.005
+## Chain 1:   3600       -34446.089             0.006            0.006
+## Chain 1:   3700       -34691.968             0.007            0.007
+## Chain 1:   3800       -34351.710             0.007            0.007
+## Chain 1:   3900       -34520.037             0.007            0.007
+## Chain 1:   4000       -34444.488             0.006            0.006
+## Chain 1:   4100       -34528.605             0.006            0.006
+## Chain 1:   4200       -34510.705             0.005            0.005
+## Chain 1:   4300       -34274.799             0.004            0.005
+## Chain 1:   4400       -34376.552             0.005            0.005
+## Chain 1:   4500       -34224.731             0.005            0.005
+## Chain 1:   4600       -34229.198             0.004            0.004
+## Chain 1:   4700       -34218.237             0.003            0.003
+## Chain 1:   4800       -34388.929             0.003            0.003
+## Chain 1:   4900       -34256.747             0.003            0.003
+## Chain 1:   5000       -34314.157             0.003            0.003
+## Chain 1:   5100       -34037.733             0.003            0.004
+## Chain 1:   5200       -34396.181             0.004            0.004
+## Chain 1:   5300       -34293.951             0.004            0.004
+## Chain 1:   5400       -34192.755             0.004            0.004
+## Chain 1:   5500       -34415.785             0.004            0.004
+## Chain 1:   5600       -34256.928             0.005            0.005
+## Chain 1:   5700       -34188.069             0.005            0.005
+## Chain 1:   5800       -34250.151             0.004            0.004
+## Chain 1:   5900       -34250.073             0.004            0.003
+## Chain 1:   6000       -34067.566             0.004            0.005
+## Chain 1:   6100       -34245.983             0.004            0.005
+## Chain 1:   6200       -34199.735             0.003            0.003
+## Chain 1:   6300       -34250.312             0.003            0.003
+## Chain 1:   6400       -34252.228             0.003            0.002
+## Chain 1:   6500       -34179.371             0.002            0.002
+## Chain 1:   6600       -34073.857             0.002            0.002
+## Chain 1:   6700       -34044.324             0.002            0.002
+## Chain 1:   6800       -34211.360             0.002            0.002
+## Chain 1:   6900       -34171.296             0.003            0.002
+## Chain 1:   7000       -34031.041             0.002            0.002
+## Chain 1:   7100       -34068.768             0.002            0.001
+## Chain 1:   7200       -34084.185             0.002            0.001
+## Chain 1:   7300       -34097.478             0.002            0.001
+## Chain 1:   7400       -34155.934             0.002            0.002
+## Chain 1:   7500       -34166.018             0.002            0.001
+## Chain 1:   7600       -34017.775             0.002            0.001
+## Chain 1:   7700       -34060.608             0.002            0.001
+## Chain 1:   7800       -34028.828             0.002            0.001
+## Chain 1:   7900       -33995.140             0.002            0.001
+## Chain 1:   8000       -34073.179             0.001            0.001
+## Chain 1:   8100       -34150.840             0.001            0.001
+## Chain 1:   8200       -34092.055             0.002            0.002
+## Chain 1:   8300       -34064.831             0.002            0.002
+## Chain 1:   8400       -33986.349             0.002            0.002
+## Chain 1:   8500       -34130.991             0.002            0.002
+## Chain 1:   8600       -34018.486             0.002            0.002
+## Chain 1:   8700       -33980.396             0.002            0.002
+## Chain 1:   8800       -34003.466             0.002            0.002
+## Chain 1:   8900       -34063.555             0.002            0.002
+## Chain 1:   9000       -34050.229             0.002            0.002
+## Chain 1:   9100       -34006.254             0.002            0.002
+## Chain 1:   9200       -33975.570             0.002            0.001
+## Chain 1:   9300       -34033.774             0.002            0.002
+## Chain 1:   9400       -33996.239             0.002            0.001
+## Chain 1:   9500       -34068.013             0.001            0.001
+## Chain 1:   9600       -33983.235             0.001            0.001
+## Chain 1:   9700       -34057.591             0.001            0.002
+## Chain 1:   9800       -33988.372             0.002            0.002
+## Chain 1:   9900       -33957.188             0.002            0.002
+## Chain 1:   10000       -34018.013             0.002            0.002
+## Chain 1: Informational Message: The maximum number of iterations is reached! The algorithm may not have converged.
+## Chain 1: This variational approximation is not guaranteed to be meaningful.
+## Chain 1: 
+## Chain 1: Drawing a sample of size 1000 from the approximate posterior... 
+## Chain 1: COMPLETED.</code></pre>
+<pre><code>## Warning: Pareto k diagnostic value is 10.62. Resampling is disabled. Decreasing
+## tol_rel_obj may help if variational algorithm has terminated prematurely.
+## Otherwise consider using sampling instead.</code></pre>
+<pre class="r"><code>#loo6 &lt;- loo(fitStanLmer7)
+#loo6 # fa cagare 100%
+if(file.exists(&quot;../models/multilevel-base_files/kf9.RData&quot;)){
+    load(&quot;../models/multilevel-base_files/kf9.RData&quot;)
+}else{
+    set.seed(2021-05-13)
+    kf9 &lt;- kfold(fitStanLmer9, K = 10, cores = cores)
+    save(kf9, file = &quot;../models/multilevel-base_files/kf9.RData&quot;)
+}</code></pre>
+<pre class="r"><code>kf9</code></pre>
+<pre><code>## 
+## Based on 10-fold cross-validation
+## 
+##            Estimate    SE
+## elpd_kfold -33441.4  93.9
+## p_kfold          NA    NA
+## kfoldic     66882.7 187.7</code></pre>
+<pre><code>       Estimate    SE</code></pre>
+<p>elpd_kfold -33441.4 93.9 p_kfold NA NA kfoldic 66882.7 187.7</p>
+<p>tolgo time2 dal modello migliore (fitstanlmer6)</p>
+<pre class="r"><code>fitStanLmer10 = stan_glmer(f0 ~ time + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = &quot;meanfield&quot;,
+                         QR = TRUE,
+                         seed = 2021-05-13)</code></pre>
+<pre><code>## Chain 1: ------------------------------------------------------------
+## Chain 1: EXPERIMENTAL ALGORITHM:
+## Chain 1:   This procedure has not been thoroughly tested and may be unstable
+## Chain 1:   or buggy. The interface is subject to change.
+## Chain 1: ------------------------------------------------------------
+## Chain 1: 
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Gradient evaluation took 0 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Begin eta adaptation.
+## Chain 1: Iteration:   1 / 250 [  0%]  (Adaptation)
+## Chain 1: Iteration:  50 / 250 [ 20%]  (Adaptation)
+## Chain 1: Iteration: 100 / 250 [ 40%]  (Adaptation)
+## Chain 1: Iteration: 150 / 250 [ 60%]  (Adaptation)
+## Chain 1: Iteration: 200 / 250 [ 80%]  (Adaptation)
+## Chain 1: Iteration: 250 / 250 [100%]  (Adaptation)
+## Chain 1: Success! Found best value [eta = 0.1].
+## Chain 1: 
+## Chain 1: Begin stochastic gradient ascent.
+## Chain 1:   iter             ELBO   delta_ELBO_mean   delta_ELBO_med   notes 
+## Chain 1:    100     -1777151.609             1.000            1.000
+## Chain 1:    200      -429857.526             2.067            3.134
+## Chain 1:    300      -127541.204             2.168            2.370
+## Chain 1:    400       -76651.563             1.792            2.370
+## Chain 1:    500       -60874.378             1.486            1.000
+## Chain 1:    600       -54991.464             1.256            1.000
+## Chain 1:    700       -52742.574             1.082            0.664
+## Chain 1:    800       -51089.565             0.951            0.664
+## Chain 1:    900       -49631.429             0.849            0.259
+## Chain 1:   1000       -48320.756             0.767            0.259
+## Chain 1:   1100       -47145.552             0.669            0.107   MAY BE DIVERGING... INSPECT ELBO
+## Chain 1:   1200       -46182.733             0.358            0.043
+## Chain 1:   1300       -45120.939             0.123            0.032
+## Chain 1:   1400       -44224.531             0.059            0.029
+## Chain 1:   1500       -43386.064             0.035            0.027
+## Chain 1:   1600       -42698.668             0.026            0.025
+## Chain 1:   1700       -41898.413             0.023            0.024
+## Chain 1:   1800       -41350.100             0.021            0.021
+## Chain 1:   1900       -40711.592             0.020            0.020
+## Chain 1:   2000       -40173.170             0.019            0.019
+## Chain 1:   2100       -39703.392             0.017            0.019
+## Chain 1:   2200       -39219.598             0.016            0.016
+## Chain 1:   2300       -38718.218             0.015            0.016
+## Chain 1:   2400       -38311.234             0.014            0.013
+## Chain 1:   2500       -37966.476             0.013            0.013
+## Chain 1:   2600       -37591.192             0.013            0.013
+## Chain 1:   2700       -37233.179             0.012            0.012
+## Chain 1:   2800       -36928.136             0.011            0.012
+## Chain 1:   2900       -36698.306             0.010            0.011
+## Chain 1:   3000       -36448.277             0.010            0.010
+## Chain 1:   3100       -36173.420             0.009            0.010
+## Chain 1:   3200       -35951.869             0.009            0.009
+## Chain 1:   3300       -35762.729             0.008            0.008
+## Chain 1:   3400       -35582.229             0.007            0.008
+## Chain 1:   3500       -35449.843             0.007            0.007
+## Chain 1:   3600       -35216.484             0.007            0.007
+## Chain 1:   3700       -35103.263             0.006            0.006
+## Chain 1:   3800       -34953.737             0.006            0.006
+## Chain 1:   3900       -34857.575             0.005            0.005
+## Chain 1:   4000       -34774.846             0.005            0.005
+## Chain 1:   4100       -34717.887             0.004            0.004
+## Chain 1:   4200       -34577.250             0.004            0.004
+## Chain 1:   4300       -34534.185             0.004            0.004
+## Chain 1:   4400       -34414.695             0.003            0.003
+## Chain 1:   4500       -34340.394             0.003            0.003
+## Chain 1:   4600       -34296.846             0.003            0.003
+## Chain 1:   4700       -34251.210             0.002            0.002
+## Chain 1:   4800       -34181.327             0.002            0.002
+## Chain 1:   4900       -34153.467             0.002            0.002
+## Chain 1:   5000       -34107.970             0.002            0.002
+## Chain 1:   5100       -34067.291             0.002            0.001
+## Chain 1:   5200       -34048.425             0.002            0.001
+## Chain 1:   5300       -34074.992             0.001            0.001
+## Chain 1:   5400       -33991.919             0.001            0.001
+## Chain 1:   5500       -34002.984             0.001            0.001
+## Chain 1:   5600       -33956.738             0.001            0.001
+## Chain 1:   5700       -33943.535             0.001            0.001
+## Chain 1:   5800       -33929.834             0.001            0.001
+## Chain 1:   5900       -33940.767             0.001            0.001
+## Chain 1:   6000       -33915.858             0.001            0.001
+## Chain 1:   6100       -33880.413             0.001            0.001
+## Chain 1:   6200       -33903.259             0.001            0.001
+## Chain 1:   6300       -33869.459             0.001            0.001
+## Chain 1:   6400       -33876.633             0.001            0.001
+## Chain 1:   6500       -33859.262             0.001            0.001
+## Chain 1:   6600       -33853.200             0.001            0.001
+## Chain 1:   6700       -33844.473             0.001            0.001
+## Chain 1:   6800       -33840.929             0.001            0.001
+## Chain 1:   6900       -33833.293             0.000            0.001
+## Chain 1:   7000       -33833.662             0.000            0.000
+## Chain 1:   7100       -33824.675             0.000            0.000
+## Chain 1:   7200       -33830.885             0.000            0.000
+## Chain 1:   7300       -33815.897             0.000            0.000
+## Chain 1:   7400       -33801.035             0.000            0.000
+## Chain 1:   7500       -33811.527             0.000            0.000
+## Chain 1:   7600       -33812.363             0.000            0.000
+## Chain 1:   7700       -33816.606             0.000            0.000
+## Chain 1:   7800       -33831.693             0.000            0.000
+## Chain 1:   7900       -33794.476             0.000            0.000
+## Chain 1:   8000       -33788.012             0.000            0.000
+## Chain 1:   8100       -33778.038             0.000            0.000
+## Chain 1:   8200       -33786.013             0.000            0.000
+## Chain 1:   8300       -33765.163             0.000            0.000
+## Chain 1:   8400       -33775.165             0.000            0.000
+## Chain 1:   8500       -33775.457             0.000            0.000
+## Chain 1:   8600       -33764.286             0.000            0.000
+## Chain 1:   8700       -33757.004             0.000            0.000
+## Chain 1:   8800       -33755.299             0.000            0.000
+## Chain 1:   8900       -33748.537             0.000            0.000
+## Chain 1:   9000       -33753.441             0.000            0.000
+## Chain 1:   9100       -33743.184             0.000            0.000
+## Chain 1:   9200       -33742.941             0.000            0.000
+## Chain 1:   9300       -33735.214             0.000            0.000
+## Chain 1:   9400       -33730.721             0.000            0.000
+## Chain 1:   9500       -33735.876             0.000            0.000
+## Chain 1:   9600       -33752.643             0.000            0.000
+## Chain 1:   9700       -33720.041             0.000            0.000
+## Chain 1:   9800       -33736.083             0.000            0.000
+## Chain 1:   9900       -33708.142             0.000            0.000
+## Chain 1:   10000       -33720.413             0.000            0.000
+## Chain 1: Informational Message: The maximum number of iterations is reached! The algorithm may not have converged.
+## Chain 1: This variational approximation is not guaranteed to be meaningful.
+## Chain 1: 
+## Chain 1: Drawing a sample of size 1000 from the approximate posterior... 
+## Chain 1: COMPLETED.</code></pre>
+<pre><code>## Warning: Pareto k diagnostic value is 6.21. Resampling is disabled. Decreasing
+## tol_rel_obj may help if variational algorithm has terminated prematurely.
+## Otherwise consider using sampling instead.</code></pre>
+<pre class="r"><code>#loo10 &lt;- loo(fitStanLmer10)
+#loo10 # fa cagare 100%
+if(file.exists(&quot;../models/multilevel-base_files/kf10.RData&quot;)){
+    load(&quot;../models/multilevel-base_files/kf10.RData&quot;)
+}else{
+    set.seed(2021-05-13)
+    kf10 &lt;- kfold(fitStanLmer10, K = 10, cores = cores)
+    save(kf10, file = &quot;../models/multilevel-base_files/kf10.RData&quot;)
+}</code></pre>
+<pre class="r"><code>kf10</code></pre>
+<pre><code>## 
+## Based on 10-fold cross-validation
+## 
+##            Estimate    SE
+## elpd_kfold -33160.6  90.6
+## p_kfold          NA    NA
+## kfoldic     66321.2 181.2</code></pre>
+<pre><code>       Estimate    SE</code></pre>
+<p>elpd_kfold -33160.6 90.6 p_kfold NA NA kfoldic 66321.2 181.2</p>
+<pre class="r"><code>loo_compare(kf10, kf9, kf8, kf7, kf6, kf5, kf4, kf3, kf1)</code></pre>
+<pre><code>##               elpd_diff se_diff
+## fitStanLmer10     0.0       0.0
+## fitStanLmer6   -234.7      36.9
+## fitStanLmer4   -241.3      40.0
+## fitStanLmer3   -261.7      42.3
+## fitStanLmer9   -280.8      40.8
+## fitStanLmer8   -370.8      42.2
+## fitStanLmer7   -371.5      41.0
+## fitStanLmer5   -427.6      45.2
+## fitStanLmer2  -1518.2      65.9</code></pre>
+<pre class="r"><code>#save(kf6, kf5, kf4, kf3, kf1, file = &quot;../models/multilevel-base_files/cv_multilevel_base.RData&quot;)</code></pre>
 
 
 
