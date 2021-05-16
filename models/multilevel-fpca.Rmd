@@ -205,8 +205,9 @@ ppc_full(mandarino, ypred)
 cores  = min(4, parallel::detectCores())
 library(loo)
 
+#parametri da regolare: tol_rel_obj (default 0.01), iter (default 10000), elbo_samples (default 100), grad_samples (default 1)
+
 # Nel primo modello metto un po' di tutto
-set.seed(123)
 fitStanLmerFpca1 = stan_glmer(f0 ~ cog_load + current + peak + syllable1 + syllable2 + syllable1:syllable2 +
                               PC1 + PC2 + PC3 + PC4 +
                               PC1:syllable1 + PC1:syllable2 +
@@ -226,8 +227,8 @@ fitStanLmerFpca1 = stan_glmer(f0 ~ cog_load + current + peak + syllable1 + sylla
                               (0 + PC4:syllable2 | subject) 
                               ,
                          data = mandarino_fpca,
-                    algorithm = "meanfield",
-                    iter = 20000,
+                    #algorithm = "meanfield", tol_rel_obj = 0.00001, elbo_samples = 10000, grad_samples = 10,
+                    iter = 2000,
                     QR = TRUE)
 
 save(fitStanLmerFpca1, file="fitStanLmerFpca1.Rdata")
@@ -235,7 +236,7 @@ summary(fitStanLmerFpca1)
 
 loo1 <- loo(fitStanLmerFpca1, cores = cores) # warnings?
 loo1$estimates
-#k1 <- kfold(fitStanLmerFpca1, K = 10, cores = cores, verbose = T) RIP si impianta
+k1 <- kfold(fitStanLmerFpca1, K = 10, cores = cores, verbose = T) #RIP si impianta
 
 
 ```
