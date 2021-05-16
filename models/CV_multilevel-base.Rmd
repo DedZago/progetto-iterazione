@@ -278,8 +278,91 @@ elpd_kfold -33160.6  90.6
 p_kfold          NA    NA
 kfoldic     66321.2 181.2
 
+Tolgo syllable1 e syllable2 e syllable1:syllable2
 ```{r}
-loo_compare(kf10, kf9, kf8, kf7, kf6, kf5, kf4, kf3, kf1)
+fitStanLmer11 = stan_glmer(f0 ~ time + current + time:current + time2:current + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+#loo10 <- loo(fitStanLmer10)
+#loo10 # fa cagare 100%
+if(file.exists("../models/multilevel-base_files/kf11.RData")){
+    load("../models/multilevel-base_files/kf11.RData")
+}else{
+    set.seed(2021-05-13)
+    kf11 <- kfold(fitStanLmer11, K = 10, cores = cores)
+    save(kf11, file = "../models/multilevel-base_files/kf11.RData")
+}
+
+```
+```{r}
+kf11
+```
+           Estimate    SE
+elpd_kfold -33213.9  94.9
+p_kfold          NA    NA
+kfoldic     66427.9 189.9
+
+```{r}
+fitStanLmer12 = stan_glmer(f0 ~ current + time:current + time2:current + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+#loo10 <- loo(fitStanLmer10)
+#loo10 # fa cagare 100%
+if(file.exists("../models/multilevel-base_files/kf12.RData")){
+    load("../models/multilevel-base_files/kf12.RData")
+}else{
+    set.seed(2021-05-13)
+    kf12 <- kfold(fitStanLmer12, K = 10, cores = cores)
+    save(kf12, file = "../models/multilevel-base_files/kf12.RData")
+}
+
+```
+```{r}
+kf12
+```
+           Estimate    SE
+elpd_kfold -33386.7  91.2
+p_kfold          NA    NA
+kfoldic     66773.5 182.5
+
+```{r}
+fitStanLmer13 = stan_glmer(f0 ~ current + time:current + time2:current +
+                               time:syllable1 + time:syllable2 + time:syllable1:syllable2 +
+                               peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+#loo10 <- loo(fitStanLmer10)
+#loo10 # fa cagare 100%
+if(file.exists("../models/multilevel-base_files/kf13.RData")){
+    load("../models/multilevel-base_files/kf13.RData")
+}else{
+    set.seed(2021-05-13)
+    kf13 <- kfold(fitStanLmer13, K = 10, cores = cores)
+    save(kf13, file = "../models/multilevel-base_files/kf13.RData")
+}
+
+```
+```{r}
+kf13
+```
+           Estimate    SE
+elpd_kfold -33503.1  93.2
+p_kfold          NA    NA
+kfoldic     67006.1 186.4
+
+
+
+```{r}
+loo_compare(kf13, kf12, kf11, kf10, kf9, kf8, kf7, kf6, kf5, kf4, kf3, kf1)
 ```
 
 ```{r}
