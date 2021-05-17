@@ -153,3 +153,55 @@ plot_repetition(4)
 
 Sembra esserci uno leggero abbassamento generale dei livelli di intonazioni dalla prima ripetizione alla quarta ripetizione.
 
+Grafico di $f_0$ in media
+
+```{r}
+rm(list = ls())
+load("data/mandarino-proc.RData")
+```
+
+```{r}
+library(ggplot2)
+library(magrittr)
+
+plot_subject_medio = function(subj, dati = mandarino){
+    # Plot frequency profiles (f_0) for an individual subject
+	#
+    # @param subj: string containing subject identifier, e.g. "S10"
+    # @param dati: dataset
+	#
+    # @return ggplot2 object
+
+    if(!subj %in% levels(dati$subject)) stop("Subject not found")
+    
+    dati %>%
+        subset(subject == subj) %>%
+        ggplot(aes(x = time, y = f0)) +
+        geom_line(aes(color = 2)) + 
+        facet_grid(cog_load ~  syllable1*syllable2) +
+        guides(color=guide_legend(title="Subject"))
+}
+
+
+plot_all = function(dati = mandarino){
+    # Plot frequency profiles from the dataset with the mean for each subject
+    #@return ggplot2 object
+        dati %>%
+            ggplot(aes(x = time, y = f0)) +
+            geom_line(aes(group = subject, color = substring(subject, 2))) + 
+            facet_grid(cog_load ~  syllable1*syllable2) +
+            guides(color=guide_legend(title="Subject"))
+}
+```
+```{r plot_all, fig.cap="\\label{fig:all} Profili di $f_0$ per i soggetti sotto studio, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache = TRUE}
+plot_all() # Plot di tutti i dati
+```
+```{r}
+plot_subject_medio("S4")
+```
+```{r}
+plot_subject_medio("S2")
+```
+```{r}
+plot_subject_medio("S8")
+```
