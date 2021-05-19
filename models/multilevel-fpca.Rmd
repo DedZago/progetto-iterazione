@@ -223,7 +223,7 @@ cv_stanvb = function(stanfit, K = 10, cores = min(K, 10)){
                          tol_rel_obj = 0.0001,
                          elbo_samples = 100,
                          grad_samples = 3,
-                         iter = 20000,
+                         iter = 10000,
                          QR = TRUE)
         cat("Fit modello ", i, " completato\n\n")
 
@@ -310,6 +310,88 @@ kf = kf[-9]             # algoritmo 9 non è andato a convergenza
 print(cbind("mean" = mean(unlist(kf)), "sd" = sd(unlist(kf))))
 ```
 
+```{r fit_fullfissi}
+if(file.exists("fitStanLmerFpca4.Rdata")){
+    load("fitStanLmerFpca4.Rdata")
+} else{
+    fitStanLmerFpca4 = stan_glmer(f0 ~ current + cog_load +
+                                  syllable1 + syllable2 + syllable1:syllable2 +
+                                  PC1 + PC2 + PC3 + PC4 +
+                                  PC1:syllable1 + PC1:syllable2 +
+                                  PC2:syllable1 + PC2:syllable2 +
+                                  PC3:syllable1 + PC3:syllable2 +
+                                  PC4:syllable1 + PC4:syllable2 +
+                                  (1 | subject) +
+                                  (0 + current|subject) +
+                                  (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                                  (0 + PC1:syllable1 | subject) +
+                                  (0 + PC1:syllable2 | subject) +
+                                  (0 + PC2:syllable1 | subject) +
+                                  (0 + PC2:syllable2 | subject) +
+                                  (0 + PC3:syllable1 | subject) +
+                                  (0 + PC3:syllable2 | subject) +
+                                  (0 + PC4:syllable1 | subject) +
+                                  (0 + PC4:syllable2 | subject) 
+                              ,
+                              data = mandarino_fpca,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 3,
+                              iter = 15000,
+                              QR = TRUE)
+    save(fitStanLmerFpca4, file="fitStanLmerFpca4.Rdata")
+}
+```
+
+```{r kf_fullfissi}
+if(file.exists("kf4.Rdata")){
+    load("kf4.Rdata")
+} else{
+    kf4 = cv_stanvb(fitStanLmerFpca4, K = K, cores = kfcores)
+    save(kf4, file = "kf4.Rdata")
+}
+print(cbind("mean" = mean(unlist(kf4)), "sd" = sd(unlist(kf4))))
+```
+
+```{r fit_fullfissi2}
+if(file.exists("fitStanLmerFpca5.Rdata")){
+    load("fitStanLmerFpca5.Rdata")
+} else{
+    fitStanLmerFpca5 = stan_glmer(f0 ~ current + cog_load +
+                                  syllable1 + syllable2 + syllable1:syllable2 +
+                                  PC1 + PC2 + PC3 + PC4 +
+                                  PC1:syllable1 + PC1:syllable2 +
+                                  PC2:syllable1 + PC2:syllable2 +
+                                  PC3:syllable1 + PC3:syllable2 +
+                                  PC4:syllable1 + PC4:syllable2 +
+                                  (1 | subject) +
+                                  (0 + current|subject) +
+                                  (0 + syllable1 + syllable2 + syllable1:syllable2 | subject) +
+                                  (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                                  (0 + PC1:syllable1 | subject) +
+                                  (0 + PC1:syllable2 | subject) +
+                                  (0 + PC2:syllable1 | subject) +
+                                  (0 + PC2:syllable2 | subject) +
+                                  (0 + PC3:syllable1 | subject) +
+                                  (0 + PC3:syllable2 | subject) +
+                                  (0 + PC4:syllable1 | subject) +
+                                  (0 + PC4:syllable2 | subject) 
+                              ,
+                              data = mandarino_fpca,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 3,
+                              iter = 100,
+                              QR = TRUE)
+    save(fitStanLmerFpca5, file="fitStanLmerFpca5.Rdata")
+}
+```
+
+```{r kf_fullfissi2}
+if(file.exists("kf5.Rdata")){
+    load("kf5.Rdata")
+} else{
+    kf5 = cv_stanvb(fitStanLmerFpca5, K = K, cores = kfcores)
+    save(kf5, file = "kf5.Rdata")
+}
+print(cbind("mean" = mean(unlist(kf5)), "sd" = sd(unlist(kf5))))
+```
 ```{r fit_nocog_load}
 if(file.exists("fitStanLmerFpca2.Rdata")){
     load("fitStanLmerFpca2.Rdata")
@@ -388,11 +470,18 @@ if(file.exists("kf3.Rdata")){
 print(cbind("mean" = mean(unlist(kf3)), "sd" = sd(unlist(kf3))))
 ```
 ```{r kfold_comparison}
-rbind(cbind(mean(unlist(kf1)),  sd(unlist(kf1))),
+rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))),
+      cbind(mean(unlist(kf4)), sd(unlist(kf4))),
+      cbind(mean(unlist(kf1)), sd(unlist(kf1))),
       cbind(mean(unlist(kf)),  sd(unlist(kf))),
-      cbind(mean(unlist(kf2)),  sd(unlist(kf2))),
-      cbind(mean(unlist(kf3)),  sd(unlist(kf3)))
+      cbind(mean(unlist(kf2)), sd(unlist(kf2))),
+      cbind(mean(unlist(kf3)), sd(unlist(kf3)))
       ) %>%
-    set_rownames(c("No eff. casuali di interazione", "Eff. casuali interazione", "Eff. casuali interazione no cog_load", "Eff. casuali interazione no cog_load no current")) %>%
+    set_rownames(c("Eff. misti syllable e PCA:syllable, full fissi",
+                   "Eff. misti PCA:syllable, full fissi",
+                   "No eff. misti PCA:syllable, full fissi",
+                   "Eff. misti PCA:syllable, no syllable",
+                   "Eff. misti PCA:syllable, no cog_load",
+                   "Eff. misti PCA:syllable, no cog_load no current")) %>%
     set_colnames(c("mean", "sd"))
 ```
