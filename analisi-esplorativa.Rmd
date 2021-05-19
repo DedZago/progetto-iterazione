@@ -82,19 +82,19 @@ plot_repetition = function(repetit, dati = mandarino){
     # @param dati: dataset
 	#
     # @return ggplot2 object
-
+    dati$subject = factor(dati$subject, levels = mixedsort(levels(dati$subject)))
     if(!repetit %in% unique(dati$repetition)){
         # Plot everything if repetition is not present
         dati %>%
             ggplot(aes(x = time, y = f0)) +
-            geom_line(aes(group = interaction(subject,repetition), color = substring(subject, 2))) + 
+            geom_line(aes(group = interaction(subject,repetition), color = subject)) + 
             facet_grid(cog_load ~  syllable1*syllable2) +
             guides(color=guide_legend(title="Subject"))
     } else{
         dati %>%
             subset(repetition == repetit) %>%
             ggplot(aes(x = time, y = f0)) +
-            geom_line(aes(group = interaction(subject,repetition), color = substring(subject, 2))) + 
+            geom_line(aes(group = interaction(subject,repetition), color = subject)) + 
             facet_grid(cog_load ~  syllable1*syllable2) +
             guides(color=guide_legend(title="Subject"))
     }    
@@ -163,6 +163,7 @@ load("data/mandarino-proc.RData")
 ```{r}
 library(ggplot2)
 library(magrittr)
+library(gtools)
 
 plot_subject_medio = function(subj, dati = mandarino){
     # Plot frequency profiles (f_0) for an individual subject
@@ -186,15 +187,18 @@ plot_subject_medio = function(subj, dati = mandarino){
 plot_all = function(dati = mandarino){
     # Plot frequency profiles from the dataset with the mean for each subject
     #@return ggplot2 object
+    dati$subject = factor(dati$subject, levels = mixedsort(levels(dati$subject)))
         dati %>%
             ggplot(aes(x = time, y = f0)) +
-            geom_line(aes(group = subject, color = substring(subject, 2))) + 
+            geom_line(aes(group = subject, color = subject)) + 
             facet_grid(cog_load ~  syllable1*syllable2) +
             guides(color=guide_legend(title="Subject"))
 }
 ```
 ```{r plot_all, fig.cap="\\label{fig:all} Profili di $f_0$ per i soggetti sotto studio, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache = TRUE}
-plot_all() # Plot di tutti i dati
+plot_all()
+#g = plot_all() # Plot di tutti i dati
+#ggsave(filename = "plot_all_medio.pdf", plot = g)
 ```
 ```{r}
 plot_subject_medio("S4")
