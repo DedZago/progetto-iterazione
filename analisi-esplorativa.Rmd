@@ -56,6 +56,7 @@ Studiare intonazione (come cambia $f_0$) al variare delle sillabe mentre la si p
 ```{r}
 library(ggplot2)
 library(magrittr)
+library(gtools)
 
 plot_subject = function(subj, dati = mandarino){
     # Plot frequency profiles (f_0) for an individual subject
@@ -119,6 +120,7 @@ plot_subject("S1")
 ```{r plot_subj2, fig.cap="\\label{fig:subj2}Profili di $f_0$ per il soggetto S2, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
 plot_subject("S2")
 ```
+
 
 
 Dai grafici nelle Figure \ref{fig:subj1} e \ref{fig:subj2} confrontiamo dei profili di $f_0$ per due specifici soggetti, e possiamo osservare che:
