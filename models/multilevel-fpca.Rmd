@@ -26,7 +26,7 @@ library(magrittr)
 library(lme4)
 library(dplyr)
 library(gtools)
-library(tidyverse)
+library(tidyr)
 ```
 
 # Preprocessing #
@@ -72,16 +72,63 @@ ypred = predict(fpca, Y_list, t_list)
 eigenFPCA = fpca$phi                                 
 matplot(eigenFPCA, type = "l", main = "Funzioni principali")
 legend("topleft", legend=paste0("fPC ", 1:K), col=1:K,cex=0.8, fill=1:K)
+```
+
+Variabilità delle funzioni principali rispetto alla rimozione dei soggetti.
+
+```{r fpca_var}
+mandarino$subject = factor(x = mandarino$subject, levels = mixedsort(levels(mandarino$subject)))
+fpca_list = vector(mode = "list", length = length(unique(mandarino$subject)))
+i = 1
+for(subj in unique(mandarino$subject)){
+    idx = mandarino_wide$subject == subj
+    Y_sub = as.matrix(mandarino_wide[!idx , 5:(NCOL(mandarino_wide)) ])             # funzioni senza il soggetto
+    Y_list_sub = lapply(seq_len(NROW(Y_sub)), function(i) Y_sub[i,])
+    t_list_sub = lapply(seq_len(NROW(Y_sub)), function(i) 1:20)
+    fpca_list[[i]] = FPCA(Ly = Y_list_sub, Lt = t_list_sub, optns = list(FVEthreshold = fve))
+    i = i+1
+}
+
+
+plot_phi_list = function(fpca_list, m = 1){
+    # Plot delle funzioni principali sovrapposte da una lista di oggetti fpca
+    #
+    # @param fpca_list: lista di fpca
+    # @param m: ordine della funzione principale da plottare
+    #
+    # @return oggetto plot contenente il grafico sovrapposto delle fpc
+    
+    ymax = max(unlist(lapply(fpca_list, function(obj) max(obj$phi))))
+    ymin = min(unlist(lapply(fpca_list, function(obj) min(obj$phi))))
+
+    plot(fpca_list[[1]]$obsGrid, ylim = c(ymin, ymax), type = "n", xlab = "t", ylab = "f0", main = paste0("fPC ", m))
+    for(i in 1:length(fpca_list)){
+        lines(fpca_list[[i]]$obsGrid, fpca_list[[i]]$phi[ , m ])
+    }
+}
+
+par(mfrow = c(2,2))
+plot_phi_list(fpca_list, 1)
+plot_phi_list(fpca_list, 2)
+plot_phi_list(fpca_list, 3)
+plot_phi_list(fpca_list, 4)
+par(mfrow = c(1,1))
 
 # Aggiungo le autofunzioni come covariate al dataset
-eigenColumns = NULL
-for(i in 1:NROW(Y)){
-    eigenColumns = rbind(eigenColumns, eigenFPCA)
+eigenColumns = matrix(0, nrow = NROW(mandarino), ncol = K)
+for(lv in 1:length(levels(mandarino$subject))){
+    sj = levels(mandarino$subject)[lv]
+    idx = (mandarino$subject == sj)
+    print(sum(idx))
+    for(k in 1:K){
+        eigenColumns[idx, k] = rep(fpca_list[[lv]]$phi[ , k ], sum(idx) / 20)
+    }
 }
 
 mandarino_fpca = cbind(mandarino, eigenColumns)
 colnames(mandarino_fpca) = c(colnames(mandarino), paste0("PC", 1:K))
 ```
+
 
 ```{r pred_plot, echo=FALSE}
 # --------------------------------------------
@@ -141,11 +188,6 @@ ppc_full = function(dati, ypred){
 }
 ```
 
-```{r data_scramble}
-mandarino_fpca = mandarino_fpca[permute(1:NROW(mandarino_fpca)), ]
-
-```
-
 ```{r stan_lme_fit}
 if(file.exists("fitStanLmerFpca.Rdata")){
     load("fitStanLmerFpca.Rdata")
@@ -170,7 +212,7 @@ if(file.exists("fitStanLmerFpca.Rdata")){
                               ,
                          data = mandarino_fpca,
                     algorithm = "meanfield",
-                    iter = 20000,
+                    iter = 10000,
                     QR = TRUE)
     save(fitStanLmerFpca, file="fitStanLmerFpca.Rdata")
 }
@@ -207,12 +249,12 @@ ppc_full(mandarino, ypred)
 ## Selezione effetti fissi e casuali con k-fold
 
 ```{r cv_stanvb}
-cv_stanvb = function(stanfit, K = 10, cores = min(K, 10)){
+cv_stanvb = function(stanfit, K = 10, cores = min(K, 10), draws = 5){
     require("foreach")
     require("parallel")
     require("doParallel")
     
-    cv_stanvb_fit = function(i, f, data, ...){
+    cv_stanvb_fit = function(i, f, data, draws = 5){
         require("rstanarm")
         Y_train = data$y_train
         Y_test = data$y_test
@@ -222,14 +264,14 @@ cv_stanvb = function(stanfit, K = 10, cores = min(K, 10)){
                          algorithm = "meanfield",
                          tol_rel_obj = 0.0001,
                          elbo_samples = 100,
-                         grad_samples = 3,
+                         grad_samples = 1,
                          iter = 10000,
                          QR = TRUE)
         cat("Fit modello ", i, " completato\n\n")
 
         cat("Calcolo errore", i, "...\n")
         oss = Y_test[ , 7]
-        pred = posterior_predict(fit, newdata=Y_test, draws = 15)
+        pred = posterior_predict(fit, newdata=Y_test, draws)
         err = apply(pred, 1, function(row) mean((row - oss)^2))
         cat("Calcolo errore", i," completato\n\n")
         return(err)
@@ -253,7 +295,7 @@ cv_stanvb = function(stanfit, K = 10, cores = min(K, 10)){
     }
 
     err_list = foreach(i = 1:K, .inorder = FALSE) %dopar% {
-        cv_stanvb_fit(i, f, data_list[[i]])
+        cv_stanvb_fit(i, f, data_list[[i]], draws)
     }
     parallel::stopCluster(cl)
     return(err_list)
@@ -279,7 +321,7 @@ if(file.exists("fitStanLmerFpca1.Rdata")){
                                   (0 + PC1 + PC2 + PC3 + PC4|subject)
                               ,
                               data = mandarino_fpca,
-                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 3,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 1,
                               iter = 10000,
                               #chains = cores, cores = cores,
                               QR = TRUE)
@@ -289,26 +331,6 @@ if(file.exists("fitStanLmerFpca1.Rdata")){
 ```
 
 
-```{r kf_nointer}
-if(file.exists("kf1.Rdata")){
-    load("kf1.Rdata")
-} else{
-    kf1 = cv_stanvb(fitStanLmerFpca1, K = K, cores = kfcores)
-    save(kf1, file = "kf1.Rdata")
-}
-print(cbind("mean" = mean(unlist(kf1)), "sd" = sd(unlist(kf1))))
-```
-
-```{r kf_inter}
-if(file.exists("kf.Rdata")){
-    load("kf.Rdata")
-} else{
-    kf = cv_stanvb(fitStanLmerFpca, K = K, cores = kfcores)
-    save(kf, file = "kf.Rdata")
-}
-kf = kf[-9]             # algoritmo 9 non è andato a convergenza
-print(cbind("mean" = mean(unlist(kf)), "sd" = sd(unlist(kf))))
-```
 
 ```{r fit_fullfissi}
 if(file.exists("fitStanLmerFpca4.Rdata")){
@@ -334,21 +356,11 @@ if(file.exists("fitStanLmerFpca4.Rdata")){
                                   (0 + PC4:syllable2 | subject) 
                               ,
                               data = mandarino_fpca,
-                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 3,
-                              iter = 15000,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 1,
+                              iter = 10000,
                               QR = TRUE)
     save(fitStanLmerFpca4, file="fitStanLmerFpca4.Rdata")
 }
-```
-
-```{r kf_fullfissi}
-if(file.exists("kf4.Rdata")){
-    load("kf4.Rdata")
-} else{
-    kf4 = cv_stanvb(fitStanLmerFpca4, K = K, cores = kfcores)
-    save(kf4, file = "kf4.Rdata")
-}
-print(cbind("mean" = mean(unlist(kf4)), "sd" = sd(unlist(kf4))))
 ```
 
 ```{r fit_fullfissi2}
@@ -376,21 +388,46 @@ if(file.exists("fitStanLmerFpca5.Rdata")){
                                   (0 + PC4:syllable2 | subject) 
                               ,
                               data = mandarino_fpca,
-                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 3,
-                              iter = 100,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 1,
+                              iter = 10000,
                               QR = TRUE)
     save(fitStanLmerFpca5, file="fitStanLmerFpca5.Rdata")
 }
 ```
 
-```{r kf_fullfissi2}
-if(file.exists("kf5.Rdata")){
-    load("kf5.Rdata")
+```{r fit_fullfissi3}
+if(file.exists("fitStanLmerFpca6.Rdata")){
+    load("fitStanLmerFpca6.Rdata")
 } else{
-    kf5 = cv_stanvb(fitStanLmerFpca5, K = K, cores = kfcores)
-    save(kf5, file = "kf5.Rdata")
+    fitStanLmerFpca6 = stan_glmer(f0 ~ current + cog_load +
+                                  syllable1 + syllable2 + syllable1:syllable2 +
+                                  PC1 + PC2 + PC3 + PC4 +
+                                  PC1:syllable1 + PC1:syllable2 +
+                                  PC2:syllable1 + PC2:syllable2 +
+                                  PC3:syllable1 + PC3:syllable2 +
+                                  PC4:syllable1 + PC4:syllable2 +
+                                  PC1:syllable1:syllable2 +
+                                  PC2:syllable1:syllable2 +
+                                  PC3:syllable1:syllable2 +
+                                  PC4:syllable1:syllable2 +
+                                  (1 | subject) +
+                                  (0 + current|subject) +
+                                  (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                                  (0 + PC1:syllable1 | subject) +
+                                  (0 + PC1:syllable2 | subject) +
+                                  (0 + PC2:syllable1 | subject) +
+                                  (0 + PC2:syllable2 | subject) +
+                                  (0 + PC3:syllable1 | subject) +
+                                  (0 + PC3:syllable2 | subject) +
+                                  (0 + PC4:syllable1 | subject) +
+                                  (0 + PC4:syllable2 | subject) 
+                              ,
+                              data = mandarino_fpca,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 1,
+                              iter = 10000,
+                              QR = TRUE)
+    save(fitStanLmerFpca6, file="fitStanLmerFpca6.Rdata")
 }
-print(cbind("mean" = mean(unlist(kf5)), "sd" = sd(unlist(kf5))))
 ```
 ```{r fit_nocog_load}
 if(file.exists("fitStanLmerFpca2.Rdata")){
@@ -416,20 +453,10 @@ if(file.exists("fitStanLmerFpca2.Rdata")){
                               ,
                          data = mandarino_fpca,
                     algorithm = "meanfield",
-                    iter = 20000,
+                    iter = 10000,
                     QR = TRUE)
     save(fitStanLmerFpca2, file="fitStanLmerFpca2.Rdata")
 }
-```
-
-```{r kf_no}
-if(file.exists("kf2.Rdata")){
-    load("kf2.Rdata")
-} else{
-    kf2 = cv_stanvb(fitStanLmerFpca2, K = K, cores = kfcores)
-    save(kf2, file = "kf2.Rdata")
-}
-print(cbind("mean" = mean(unlist(kf2)), "sd" = sd(unlist(kf2))))
 ```
 
 ```{r fit_no_current}
@@ -454,28 +481,87 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
                               ,
                          data = mandarino_fpca,
                     algorithm = "meanfield",
-                    iter = 20000,
+                    iter = 10000,
                     QR = TRUE)
     save(fitStanLmerFpca3, file="fitStanLmerFpca3.Rdata")
 }
 ```
 
-```{r kf_no_current}
-if(file.exists("kf3.Rdata")){
-    load("kf3.Rdata")
-} else{
-    kf3 = cv_stanvb(fitStanLmerFpca3, K = K, cores = kfcores)
-    save(kf3, file = "kf3.Rdata")
+```{r kf_all}
+{
+    print("--------- kf ---------")
+    if(file.exists("kf.Rdata")){
+        load("kf.Rdata")
+    } else{
+        kf = cv_stanvb(fitStanLmerFpca, K = K, cores = kfcores)
+        save(kf, file = "kf.Rdata")
+    }
+    # kf = kf[-9]             # algoritmo 9 non è andato a convergenza
+    print(cbind("mean" = mean(unlist(kf)), "sd" = sd(unlist(kf))))
+
+    print("--------- kf1 ---------")
+    if(file.exists("kf1.Rdata")){
+        load("kf1.Rdata")
+    } else{
+        kf1 = cv_stanvb(fitStanLmerFpca1, K = K, cores = kfcores)
+        save(kf1, file = "kf1.Rdata")
+    }
+    print(cbind("mean" = mean(unlist(kf1)), "sd" = sd(unlist(kf1))))
+
+    print("--------- kf2 ---------")
+    if(file.exists("kf2.Rdata")){
+        load("kf2.Rdata")
+    } else{
+        kf2 = cv_stanvb(fitStanLmerFpca2, K = K, cores = kfcores)
+        save(kf2, file = "kf2.Rdata")
+    }
+
+    print(cbind("mean" = mean(unlist(kf2)), "sd" = sd(unlist(kf2))))
+
+    print("--------- kf3 ---------")
+    if(file.exists("kf3.Rdata")){
+        load("kf3.Rdata")
+    } else{
+        kf3 = cv_stanvb(fitStanLmerFpca3, K = K, cores = kfcores)
+        save(kf3, file = "kf3.Rdata")
+    }
+    print(cbind("mean" = mean(unlist(kf3)), "sd" = sd(unlist(kf3))))
+
+    print("--------- kf4 ---------")
+    if(file.exists("kf4.Rdata")){
+        load("kf4.Rdata")
+    } else{
+        kf4 = cv_stanvb(fitStanLmerFpca4, K = K, cores = kfcores)
+        save(kf4, file = "kf4.Rdata")
+    }
+    print(cbind("mean" = mean(unlist(kf4)), "sd" = sd(unlist(kf4))))
+
+    print("--------- kf5 ---------")
+    if(file.exists("kf5.Rdata")){
+        load("kf5.Rdata")
+    } else{
+        kf5 = cv_stanvb(fitStanLmerFpca5, K = K, cores = kfcores)
+        save(kf5, file = "kf5.Rdata")
+    }
+    print(cbind("mean" = mean(unlist(kf5)), "sd" = sd(unlist(kf5))))
+    
+    print("--------- kf6 ---------")
+    if(file.exists("kf6.Rdata")){
+        load("kf6.Rdata")
+    } else{
+        kf6 = cv_stanvb(fitStanLmerFpca6, K = K, cores = kfcores)
+        save(kf6, file = "kf6.Rdata")
+    }
+    print(cbind("mean" = mean(unlist(kf6)), "sd" = sd(unlist(kf6))))
 }
-print(cbind("mean" = mean(unlist(kf3)), "sd" = sd(unlist(kf3))))
 ```
 ```{r kfold_comparison}
-rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))),
-      cbind(mean(unlist(kf4)), sd(unlist(kf4))),
-      cbind(mean(unlist(kf1)), sd(unlist(kf1))),
-      cbind(mean(unlist(kf)),  sd(unlist(kf))),
-      cbind(mean(unlist(kf2)), sd(unlist(kf2))),
-      cbind(mean(unlist(kf3)), sd(unlist(kf3)))
+rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))/length(kf5)),
+      cbind(mean(unlist(kf4)), sd(unlist(kf4))/length(kf4)),
+      cbind(mean(unlist(kf1)), sd(unlist(kf1))/length(kf1)),
+      cbind(mean(unlist(kf)), sd(unlist(kf))/length(kf)),
+      cbind(mean(unlist(kf2)), sd(unlist(kf2))/length(kf2)),
+      cbind(mean(unlist(kf3)), sd(unlist(kf3))/length(kf3))
       ) %>%
     set_rownames(c("Eff. misti syllable e PCA:syllable, full fissi",
                    "Eff. misti PCA:syllable, full fissi",
@@ -484,4 +570,35 @@ rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))),
                    "Eff. misti PCA:syllable, no cog_load",
                    "Eff. misti PCA:syllable, no cog_load no current")) %>%
     set_colnames(c("mean", "sd"))
+```
+
+```{r stan_chosen_pred}
+ypredStanLmerFpca5 = posterior_predict(fitStanLmerFpca5, draws = 500)
+ypred = apply(ypredStanLmerFpca5, 2, mean)
+lmin = apply(ypredStanLmerFpca5, 2, function(col) quantile(col, p = 0.05))
+lmax = apply(ypredStanLmerFpca5, 2, function(col) quantile(col, p = 0.95))
+ypredStanLmerFpca6 = posterior_predict(fitStanLmerFpca6, draws = 1000)
+ypred = apply(ypredStanLmerFpca6, 2, mean)
+lmin = apply(ypredStanLmerFpca6, 2, function(col) quantile(col, p = 0.05))
+lmax = apply(ypredStanLmerFpca6, 2, function(col) quantile(col, p = 0.95))
+
+ppc_subject("S1", mandarino, ypred, lmin, lmax)
+ppc_subject("S2", mandarino, ypred, lmin, lmax)
+ppc_subject("S3", mandarino, ypred, lmin, lmax)
+ppc_subject("S4", mandarino, ypred, lmin, lmax)
+# ppc_subject("S5", mandarino, ypred, lmin, lmax)
+# ppc_subject("S6", mandarino, ypred, lmin, lmax)
+# ppc_subject("S7", mandarino, ypred, lmin, lmax)
+# ppc_subject("S8", mandarino, ypred, lmin, lmax)
+# ppc_subject("S9", mandarino, ypred, lmin, lmax)
+# ppc_subject("S10", mandarino, ypred, lmin, lmax)
+# ppc_subject("S11", mandarino, ypred, lmin, lmax)
+# ppc_subject("S12", mandarino, ypred, lmin, lmax)
+
+ppc_full(mandarino, ypred)
+```
+
+
+```{r kf_subject}
+
 ```
