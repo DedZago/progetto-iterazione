@@ -556,16 +556,16 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
 }
 ```
 ```{r kfold_comparison}
-rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))/length(kf5)),
-      cbind(mean(unlist(kf4)), sd(unlist(kf4))/length(kf4)),
-      cbind(mean(unlist(kf1)), sd(unlist(kf1))/length(kf1)),
-      cbind(mean(unlist(kf)), sd(unlist(kf))/length(kf)),
-      cbind(mean(unlist(kf2)), sd(unlist(kf2))/length(kf2)),
-      cbind(mean(unlist(kf3)), sd(unlist(kf3))/length(kf3))
+rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))/10),
+      cbind(mean(unlist(kf4)), sd(unlist(kf4))/10),
+      cbind(mean(unlist(kf1)), sd(unlist(kf1))/10),
+      cbind(mean(unlist(kf)), sd(unlist(kf))/10),
+      cbind(mean(unlist(kf2)), sd(unlist(kf2))/10),
+      cbind(mean(unlist(kf3)), sd(unlist(kf3))/10)
       ) %>%
-    set_rownames(c("Eff. misti syllable e PCA:syllable, full fissi",
-                   "Eff. misti PCA:syllable, full fissi",
-                   "No eff. misti PCA:syllable, full fissi",
+    set_rownames(c("Eff. misti syllable e PCA:syllable, fissi syllable PCA:syllable",
+                   "Eff. misti PCA:syllable, fissi syllable PCA:syllable",
+                   "No eff. misti PCA:syllable, fissi syllable PCA:syllable",
                    "Eff. misti PCA:syllable, no syllable",
                    "Eff. misti PCA:syllable, no cog_load",
                    "Eff. misti PCA:syllable, no cog_load no current")) %>%
@@ -600,5 +600,65 @@ ppc_full(mandarino, ypred)
 
 
 ```{r kf_subject}
+#funzione per cv togliendo un soggetto alla volta
+cv_stanvb_subj = function(stanfit, K = 12, cores = min(K, 12)){
+  require("foreach")
+  require("parallel")
+  require("doParallel")
+  
+  cv_stanvb_fit = function(i, f, data, ...){
+    require("rstanarm")
+    Y_train = data$y_train
+    Y_test = data$y_test
+    cat("Fit modello ", i)
+    fit = stan_glmer(as.formula(f),
+                     data = Y_train,
+                     algorithm = "meanfield",
+                     tol_rel_obj = 0.0001,
+                     elbo_samples = 100,
+                     grad_samples = 1,
+                     iter = 10000,
+                     QR = TRUE)
+    cat("Fit modello ", i, " completato\n\n")
+    
+    cat("Calcolo errore", i, "...\n")
+    oss = Y_test[ , 7]
+    pred = posterior_predict(fit, newdata=Y_test, draws = 5)
+    err = apply(pred, 1, function(row) mean((row - oss)^2))
+    cat("Calcolo errore", i," completato\n\n")
+    return(err)
+  }
+  
+  cl = parallel::makeCluster(cores, outfile="")
+  registerDoParallel(cl)
+  out = vector(mode = "list", length = K)
+  dati = stanfit$data
+  rownames(dati) = 1:NROW(dati)
+  f = stanfit$formula
 
+  data_list = vector(mode = "list", length = K)
+  subj = mixedsort(levels(dati$subject)) 
+  for(i in 1:K){
+    data_list[[i]]$y_train = dati[dati$subject != subj[i], ]
+    data_list[[i]]$y_test = dati[dati$subject == subj[i], ]
+  }
+  
+  err_list = foreach(i = 1:K, .inorder = FALSE) %dopar% {
+    cv_stanvb_fit(i, f, data_list[[i]])
+  }
+  parallel::stopCluster(cl)
+  return(err_list)
+}
+```
+
+Confronto quale calcola derivata più velocemente
+```{r }
+microbenchmark::microbenchmark(
+    "features" = features::features(x = 1:20, y = Y[1, ]),
+    "pracma" = pracma::gradient(Y[1, ]),
+    times = 100
+)
+deriv_orig <- t(apply(Y,
+                    1,
+                    function(row) pracma::gradient(row)))
 ```
