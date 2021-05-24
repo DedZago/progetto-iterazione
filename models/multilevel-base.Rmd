@@ -70,6 +70,7 @@ ppc_subject = function(subj, dati, ypred, ci.low = NULL, ci.upper = NULL){
     # @return ggplot2 object, plot with average effect over different repetitions
 
     if(!subj %in% levels(dati$subject)) stop("Subject not found")
+    brks  = c("y", "E(yrep|y)")
 
     datiPred = cbind(dati, "ypred" = ypred)
     if(!is.null(ci.low) & !is.null(ci.upper)){
@@ -77,8 +78,11 @@ ppc_subject = function(subj, dati, ypred, ci.low = NULL, ci.upper = NULL){
         datiPred %>%
             subset(subject == subj) %>%
             ggplot(aes(time))+
-            geom_line(aes(y = f0), alpha=0.45) + 
-            geom_line(aes(y = ypred), color = "darkblue") + 
+            geom_line(aes(y = f0, colour = brks[1]), alpha=0.9) + 
+            geom_line(aes(y = ypred, colour = brks[2])) + 
+            scale_colour_manual("", 
+                      breaks = brks,
+                      values = c("black", "blue")) +
             geom_ribbon(aes(ymin = ci.low, ymax = ci.upper), alpha=0.2) +
             facet_grid(cog_load ~  syllable1*syllable2)
     } else{
@@ -90,6 +94,7 @@ ppc_subject = function(subj, dati, ypred, ci.low = NULL, ci.upper = NULL){
             facet_grid(cog_load ~  syllable1*syllable2)
     }
 }
+
 
 ppc_full = function(dati, ypred){
     # Plot frequency profiles (f_0) for an individual subject with predictions

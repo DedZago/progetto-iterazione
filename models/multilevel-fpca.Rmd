@@ -212,6 +212,7 @@ if(file.exists("fitStanLmerFpca.Rdata")){
                               ,
                          data = mandarino_fpca,
                     algorithm = "meanfield",
+                    prior_covariance = decov(regularization = 2),
                     iter = 10000,
                     QR = TRUE)
     save(fitStanLmerFpca, file="fitStanLmerFpca.Rdata")
@@ -266,6 +267,7 @@ cv_stanvb = function(stanfit, K = 10, cores = min(K, 10), draws = 5){
                          elbo_samples = 100,
                          grad_samples = 1,
                          iter = 10000,
+                         adapt_delta = 0.8,
                          QR = TRUE)
         cat("Fit modello ", i, " completato\n\n")
 
@@ -318,14 +320,14 @@ cv_stanvb_subj = function(stanfit, K = 12, cores = min(K, 12)){
                      algorithm = "meanfield",
                      tol_rel_obj = 0.0001,
                      elbo_samples = 100,
-                     grad_samples = 3,
-                     iter = 20000,
+                     grad_samples = 1,
+                     iter = 10000,
                      QR = TRUE)
     cat("Fit modello ", i, " completato\n\n")
     
     cat("Calcolo errore", i, "...\n")
     oss = Y_test[ , 7]
-    pred = posterior_predict(fit, newdata=Y_test, draws = 15)
+    pred = posterior_predict(fit, newdata=Y_test, draws = 10)
     err = apply(pred, 1, function(row) mean((row - oss)^2))
     cat("Calcolo errore", i," completato\n\n")
     return(err)
@@ -440,6 +442,7 @@ if(file.exists("fitStanLmerFpca5.Rdata")){
                               ,
                               data = mandarino_fpca,
                               algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 1,
+                              prior_covariance = decov(regularization = 2),
                               iter = 10000,
                               QR = TRUE)
     save(fitStanLmerFpca5, file="fitStanLmerFpca5.Rdata")
@@ -515,6 +518,7 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
     load("fitStanLmerFpca3.Rdata")
 } else{
     fitStanLmerFpca3 = stan_glmer(f0 ~ PC1 + PC2 + PC3 + PC4 +
+                                  PC1:current + PC2:current + PC3:current + PC4:current+
                               PC1:syllable1 + PC1:syllable2 +
                               PC2:syllable1 + PC2:syllable2 +
                               PC3:syllable1 + PC3:syllable2 +
@@ -532,6 +536,7 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
                               ,
                          data = mandarino_fpca,
                     algorithm = "meanfield",
+                    prior_covariance = decov(regularization = 2),
                     iter = 10000,
                     QR = TRUE)
     save(fitStanLmerFpca3, file="fitStanLmerFpca3.Rdata")
@@ -545,6 +550,7 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
         load("kf.Rdata")
     } else{
         kf = cv_stanvb(fitStanLmerFpca, K = K, cores = kfcores)
+        kf = lapply(kf, mean)
         save(kf, file = "kf.Rdata")
     }
     # kf = kf[-9]             # algoritmo 9 non è andato a convergenza
@@ -555,6 +561,7 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
         load("kf1.Rdata")
     } else{
         kf1 = cv_stanvb(fitStanLmerFpca1, K = K, cores = kfcores)
+        kf1 = lapply(kf1, mean)
         save(kf1, file = "kf1.Rdata")
     }
     print(cbind("mean" = mean(unlist(kf1)), "sd" = sd(unlist(kf1))))
@@ -564,6 +571,7 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
         load("kf2.Rdata")
     } else{
         kf2 = cv_stanvb(fitStanLmerFpca2, K = K, cores = kfcores)
+        kf2 = lapply(kf2, mean)
         save(kf2, file = "kf2.Rdata")
     }
 
@@ -574,6 +582,7 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
         load("kf3.Rdata")
     } else{
         kf3 = cv_stanvb(fitStanLmerFpca3, K = K, cores = kfcores)
+        kf3 = lapply(kf3, mean)
         save(kf3, file = "kf3.Rdata")
     }
     print(cbind("mean" = mean(unlist(kf3)), "sd" = sd(unlist(kf3))))
@@ -583,6 +592,7 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
         load("kf4.Rdata")
     } else{
         kf4 = cv_stanvb(fitStanLmerFpca4, K = K, cores = kfcores)
+        kf4 = lapply(kf4, mean)
         save(kf4, file = "kf4.Rdata")
     }
     print(cbind("mean" = mean(unlist(kf4)), "sd" = sd(unlist(kf4))))
@@ -592,27 +602,28 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
         load("kf5.Rdata")
     } else{
         kf5 = cv_stanvb(fitStanLmerFpca5, K = K, cores = kfcores)
+        kf5 = lapply(kf5, mean)
         save(kf5, file = "kf5.Rdata")
     }
     print(cbind("mean" = mean(unlist(kf5)), "sd" = sd(unlist(kf5))))
     
-    print("--------- kf6 ---------")
-    if(file.exists("kf6.Rdata")){
-        load("kf6.Rdata")
-    } else{
-        kf6 = cv_stanvb(fitStanLmerFpca6, K = K, cores = kfcores)
-        save(kf6, file = "kf6.Rdata")
-    }
-    print(cbind("mean" = mean(unlist(kf6)), "sd" = sd(unlist(kf6))))
+    # print("--------- kf6 ---------")
+    # if(file.exists("kf6.Rdata")){
+    #     load("kf6.Rdata")
+    # } else{
+    #     kf6 = cv_stanvb(fitStanLmerFpca6, K = K, cores = kfcores)
+    #     save(kf6, file = "kf6.Rdata")
+    # }
+    # print(cbind("mean" = mean(unlist(kf6)), "sd" = sd(unlist(kf6))))
 }
 ```
 ```{r kfold_comparison}
-rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))/10),
-      cbind(mean(unlist(kf4)), sd(unlist(kf4))/10),
-      cbind(mean(unlist(kf1)), sd(unlist(kf1))/10),
-      cbind(mean(unlist(kf)), sd(unlist(kf))/10),
-      cbind(mean(unlist(kf2)), sd(unlist(kf2))/10),
-      cbind(mean(unlist(kf3)), sd(unlist(kf3))/10)
+rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))/sqrt(10)),
+      cbind(mean(unlist(kf4)), sd(unlist(kf4))/sqrt(10)),
+      cbind(mean(unlist(kf1)), sd(unlist(kf1))/sqrt(10)),
+      cbind(mean(unlist(kf)), sd(unlist(kf))/sqrt(10)),
+      cbind(mean(unlist(kf2)), sd(unlist(kf2))/sqrt(10)),
+      cbind(mean(unlist(kf3)), sd(unlist(kf3))/sqrt(10))
       ) %>%
     set_rownames(c("Eff. misti syllable e PCA:syllable, fissi syllable PCA:syllable",
                    "Eff. misti PCA:syllable, fissi syllable PCA:syllable",
@@ -624,14 +635,10 @@ rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))/10),
 ```
 
 ```{r stan_chosen_pred}
-ypredStanLmerFpca5 = posterior_predict(fitStanLmerFpca5, draws = 500)
-ypred = apply(ypredStanLmerFpca5, 2, mean)
-lmin = apply(ypredStanLmerFpca5, 2, function(col) quantile(col, p = 0.05))
-lmax = apply(ypredStanLmerFpca5, 2, function(col) quantile(col, p = 0.95))
-ypredStanLmerFpca6 = posterior_predict(fitStanLmerFpca6, draws = 1000)
-ypred = apply(ypredStanLmerFpca6, 2, mean)
-lmin = apply(ypredStanLmerFpca6, 2, function(col) quantile(col, p = 0.05))
-lmax = apply(ypredStanLmerFpca6, 2, function(col) quantile(col, p = 0.95))
+ypredStanLmerFpca3 = posterior_predict(fitStanLmerFpca3, draws = 500)
+ypred = apply(ypredStanLmerFpca3, 2, mean)
+lmin = apply(ypredStanLmerFpca3, 2, function(col) quantile(col, p = 0.05))
+lmax = apply(ypredStanLmerFpca3, 2, function(col) quantile(col, p = 0.95))
 
 ppc_subject("S1", mandarino, ypred, lmin, lmax)
 ppc_subject("S2", mandarino, ypred, lmin, lmax)
@@ -701,15 +708,33 @@ cv_stanvb_subj = function(stanfit, K = 12, cores = min(K, 12)){
   return(err_list)
 }
 ```
-
-Confronto quale calcola derivata più velocemente
-```{r }
-microbenchmark::microbenchmark(
-    "features" = features::features(x = 1:20, y = Y[1, ]),
-    "pracma" = pracma::gradient(Y[1, ]),
-    times = 100
-)
-deriv_orig <- t(apply(Y,
-                    1,
-                    function(row) pracma::gradient(row)))
+```{r fit_final}
+if(file.exists("fitStanFpcaFinal.Rdata")){
+    load("fitStanFpcaFinal.Rdata")
+} else{
+    fitStanFpcaFinal = stan_glmer(f0 ~ PC1 + PC2 + PC3 + PC4 +
+                              PC1:syllable1 + PC1:syllable2 +
+                              PC2:syllable1 + PC2:syllable2 +
+                              PC3:syllable1 + PC3:syllable2 +
+                              PC4:syllable1 + PC4:syllable2 +
+                              (1 | subject) +
+                              (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                              (0 + PC1:syllable1 | subject) +
+                              (0 + PC1:syllable2 | subject) +
+                              (0 + PC2:syllable1 | subject) +
+                              (0 + PC2:syllable2 | subject) +
+                              (0 + PC3:syllable1 | subject) +
+                              (0 + PC3:syllable2 | subject) +
+                              (0 + PC4:syllable1 | subject) +
+                              (0 + PC4:syllable2 | subject) 
+                              ,
+                              data = mandarino_fpca,
+                              prior_covariance = decov(regularization = 2),
+                              cores = 4,
+                              chains = 4,
+                              control = list(max_treedepth = 10),
+                              adapt_delta = 0.825,
+                              QR = TRUE)
+    save(fitStanFpcaFinal, file="fitStanFpcaFinal.Rdata")
+}
 ```
