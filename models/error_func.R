@@ -4,23 +4,24 @@ error_func <- function(yorig, ypred){
   
   # yorig vettore di valori della funzione f0
   # ypred vettore di valori previsti dal modello nello stesso ordine di yorig
-  require(features)
+  # require(features)
+  require(pracma)
   
   yorig <- matrix(yorig, ncol = 20, byrow = T)
   ypred <- matrix(ypred, ncol = 20, byrow = T)
   
  # calcolo le derivate sui valori originali  
- deriv_orig <- apply(yorig,
+ deriv_orig <- t(apply(yorig,
                     1,
-                    function(z) attr(features(x = 1:20, y = z ), "fits")$d1 )
+                    function(row) pracma::gradient(row)))
  # calcolo le derivete sui valori predetti
- deriv_pred <- apply(ypred,
+ deriv_pred <- t(apply(ypred,
                     1,
-                    function(z) attr(features(x = 1:20, y = z ), "fits")$d1 )
+                    function(row) pracma::gradient(row)))
  
  # calcolo dell'errore
- MSE <- apply((deriv_orig - derivate_pred)^2, 2, sum)
- denum <- apply(sign(deriv_orig) == sign(deriv_pred), 2, mean)
+ MSE <- mean((deriv_orig - deriv_pred)^2)
+ denum <- mean(sign(deriv_orig) == sign(deriv_pred))
  return(mean(MSE/denum))
 }
 
