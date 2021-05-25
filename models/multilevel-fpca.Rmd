@@ -620,18 +620,25 @@ if(file.exists("fitStanLmerFpca3.Rdata")){
 ```{r kfold_comparison}
 rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))/sqrt(10)),
       cbind(mean(unlist(kf4)), sd(unlist(kf4))/sqrt(10)),
-      cbind(mean(unlist(kf1)), sd(unlist(kf1))/sqrt(10)),
       cbind(mean(unlist(kf)), sd(unlist(kf))/sqrt(10)),
       cbind(mean(unlist(kf2)), sd(unlist(kf2))/sqrt(10)),
-      cbind(mean(unlist(kf3)), sd(unlist(kf3))/sqrt(10))
+      cbind(mean(unlist(kf3)), sd(unlist(kf3))/sqrt(10)),
+      cbind(mean(unlist(kf1)), sd(unlist(kf1))/sqrt(10))
       ) %>%
     set_rownames(c("Eff. misti syllable e PCA:syllable, fissi syllable PCA:syllable",
                    "Eff. misti PCA:syllable, fissi syllable PCA:syllable",
-                   "No eff. misti PCA:syllable, fissi syllable PCA:syllable",
-                   "Eff. misti PCA:syllable, no syllable",
-                   "Eff. misti PCA:syllable, no cog_load",
-                   "Eff. misti PCA:syllable, no cog_load no current")) %>%
-    set_colnames(c("mean", "sd"))
+                   "Eff. misti PCA:syllable, fissi no syllable",
+                   "Eff. misti PCA:syllable, fissi no syllable no cog_load",
+                   "Eff. misti PCA:syllable, fissi no syllable no cog_load no current",
+                   "No eff. misti PCA:syllable, fissi syllable PCA:syllable"
+                   )) %>%
+    set_colnames(c("mse", "sd")) -> fpcaKf
+
+fpcaKf
+
+library(kableExtra)
+kbl(fpcaKf, booktabs = TRUE, format = "latex") %>%
+    kable_styling(latex_options = "HOLD_position")
 ```
 
 ```{r stan_chosen_pred}
@@ -712,7 +719,8 @@ cv_stanvb_subj = function(stanfit, K = 12, cores = min(K, 12)){
 if(file.exists("fitStanFpcaFinal.Rdata")){
     load("fitStanFpcaFinal.Rdata")
 } else{
-    fitStanFpcaFinal = stan_glmer(f0 ~ PC1 + PC2 + PC3 + PC4 +
+    fitStanFpcaFinal = stan_glmer(f0 ~ current + cog_load +
+                              PC1 + PC2 + PC3 + PC4 +
                               PC1:syllable1 + PC1:syllable2 +
                               PC2:syllable1 + PC2:syllable2 +
                               PC3:syllable1 + PC3:syllable2 +
@@ -737,4 +745,27 @@ if(file.exists("fitStanFpcaFinal.Rdata")){
                               QR = TRUE)
     save(fitStanFpcaFinal, file="fitStanFpcaFinal.Rdata")
 }
+plot(fitStanFpcaFinal, plotfun = "dens_overlay", pars=names(fitStanFpcaFinal$coefficients)[1:33])
+```
+
+```{r stan_chosen_pred}
+ypredStanFpca = posterior_predict(fitStanFpcaFinal, draws = 500)
+ypred = apply(ypredStanFpca, 2, mean)
+lmin = apply(ypredStanFpca, 2, function(col) quantile(col, p = 0.05))
+lmax = apply(ypredStanFpca, 2, function(col) quantile(col, p = 0.95))
+
+ppc_subject("S1", mandarino, ypred, lmin, lmax)
+ppc_subject("S2", mandarino, ypred, lmin, lmax)
+ppc_subject("S3", mandarino, ypred, lmin, lmax)
+ppc_subject("S4", mandarino, ypred, lmin, lmax)
+# ppc_subject("S5", mandarino, ypred, lmin, lmax)
+# ppc_subject("S6", mandarino, ypred, lmin, lmax)
+# ppc_subject("S7", mandarino, ypred, lmin, lmax)
+# ppc_subject("S8", mandarino, ypred, lmin, lmax)
+# ppc_subject("S9", mandarino, ypred, lmin, lmax)
+# ppc_subject("S10", mandarino, ypred, lmin, lmax)
+# ppc_subject("S11", mandarino, ypred, lmin, lmax)
+# ppc_subject("S12", mandarino, ypred, lmin, lmax)
+
+ppc_full(mandarino, ypred)
 ```
