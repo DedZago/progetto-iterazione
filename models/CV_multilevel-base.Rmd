@@ -12,6 +12,7 @@ rm(list = ls())
 library(loo)
 library(rstanarm)
 library(dplyr)
+library(ggplot2)
 load("../data/mandarino.RData")
 mandarino$current = ifelse(mandarino$time <= 10, mandarino$syllable1, mandarino$syllable2)
 mandarino$current = levels(mandarino$syllable1)[mandarino$current]
@@ -269,6 +270,7 @@ if(file.exists("../models/multilevel-base_files/kf10.RData")){
     save(kf10, file = "../models/multilevel-base_files/kf10.RData")
 }
 
+
 ```
 ```{r}
 kf10
@@ -277,6 +279,22 @@ kf10
 elpd_kfold -33160.6  90.6
 p_kfold          NA    NA
 kfoldic     66321.2 181.2
+
+```{r}
+ypred10 = posterior_predict(fitStanLmer10, draws = 100)
+ypred = apply(ypred10, 2, mean)
+stdev = apply(ypred10, 2, sd)
+lmin = ypred - qnorm(1 - 0.05/2) * stdev
+lmax = ypred + qnorm(1 - 0.05/2) * stdev
+
+#ppc_subject("S1", mandarino, ypred, lmin, lmax)
+#ppc_subject("S2", mandarino, ypred, lmin, lmax)
+#ppc_subject("S3", mandarino, ypred, lmin, lmax)
+#ppc_subject("S4", mandarino, ypred, lmin, lmax)
+
+#ppc_full(mandarino, ypred)
+```
+
 
 Tolgo syllable1 e syllable2 e syllable1:syllable2
 ```{r}
@@ -304,6 +322,23 @@ kf11
 elpd_kfold -33213.9  94.9
 p_kfold          NA    NA
 kfoldic     66427.9 189.9
+
+```{r}
+ypred11 = posterior_predict(fitStanLmer11, draws = 100)
+ypred = apply(ypred11, 2, mean)
+stdev = apply(ypred11, 2, sd)
+lmin = ypred - qnorm(1 - 0.05/2) * stdev
+lmax = ypred + qnorm(1 - 0.05/2) * stdev
+
+
+#ppc_subject("S1", mandarino, ypred, lmin, lmax)
+#ppc_subject("S2", mandarino, ypred, lmin, lmax)
+#ppc_subject("S3", mandarino, ypred, lmin, lmax)
+#ppc_subject("S4", mandarino, ypred, lmin, lmax)
+
+#ppc_full(mandarino, ypred)
+```
+
 
 ```{r}
 fitStanLmer12 = stan_glmer(f0 ~ current + time:current + time2:current + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
@@ -364,6 +399,46 @@ kfoldic     67006.1 186.4
 ```{r}
 loo_compare(kf13, kf12, kf11, kf10, kf9, kf8, kf7, kf6, kf5, kf4, kf3, kf1)
 ```
+
+
+## Modello migliore con MCMC
+
+```{r}
+if(file.exists("MCMC_best_multilevel.RData")){
+    load("MCMC_best_multilevel.RData")
+} else{
+    best_multilevel = stan_glmer(f0 ~ time + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         QR = TRUE,
+                         seed = 2021-05-24)
+    save(best_multilevel, file="MCMC_best_multilevel.RData")
+}
+
+```
+```{r}
+summary(best_multilevel)
+```
+```{r}
+ypred_best = posterior_predict(best_multilevel, draws = 100)
+ypred = apply(ypred_best, 2, mean)
+stdev = apply(ypred_best, 2, sd)
+lmin = ypred - qnorm(1 - 0.05/2) * stdev
+lmax = ypred + qnorm(1 - 0.05/2) * stdev
+
+
+ppc_subject("S1", mandarino, ypred, lmin, lmax)
+ppc_subject("S2", mandarino, ypred, lmin, lmax)
+ppc_subject("S3", mandarino, ypred, lmin, lmax)
+ppc_subject("S4", mandarino, ypred, lmin, lmax)
+
+ppc_full(mandarino, ypred)
+```
+
+```{r}
+plot(best_multilevel, plotfun = "dens_overlay", pars=names(best_multilevel$coefficients)[1:20])
+```
+
 
 ```{r}
 #save(kf6, kf5, kf4, kf3, kf1, file = "../models/multilevel-base_files/cv_multilevel_base.RData")
