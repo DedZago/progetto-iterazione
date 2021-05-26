@@ -21,8 +21,10 @@ error_func <- function(yorig, ypred){
  
  # calcolo dell'errore
  MSE <- mean((deriv_orig - deriv_pred)^2)
+ print(MSE)
  denum <- mean(sign(deriv_orig) == sign(deriv_pred))
- return(mean(MSE/denum))
+ print(denum)
+ return(MSE/denum)
 }
 
 

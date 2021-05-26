@@ -27,6 +27,7 @@ library(lme4)
 library(dplyr)
 library(gtools)
 library(tidyr)
+library(kableExtra)
 ```
 
 # Preprocessing #
@@ -327,7 +328,7 @@ cv_stanvb_subj = function(stanfit, K = 12, cores = min(K, 12)){
     
     cat("Calcolo errore", i, "...\n")
     oss = Y_test[ , 7]
-    pred = posterior_predict(fit, newdata=Y_test, draws = 10)
+    pred = posterior_predict(fit, newdata=Y_test, draws = 50)
     err = apply(pred, 1, function(row) mean((row - oss)^2))
     cat("Calcolo errore", i," completato\n\n")
     return(err)
@@ -636,7 +637,6 @@ rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))/sqrt(10)),
 
 fpcaKf
 
-library(kableExtra)
 kbl(fpcaKf, booktabs = TRUE, format = "latex") %>%
     kable_styling(latex_options = "HOLD_position")
 ```
@@ -688,10 +688,8 @@ cv_stanvb_subj = function(stanfit, K = 12, cores = min(K, 12)){
     
     cat("Calcolo errore", i, "...\n")
     oss = Y_test[ , 7]
-    pred = posterior_predict(fit, newdata=Y_test, draws = 5)
-    err = apply(pred, 1, function(row) mean((row - oss)^2))
-    cat("Calcolo errore", i," completato\n\n")
-    return(err)
+    pred = posterior_predict(fit, newdata=Y_test, draws = 50)
+    return(pred)
   }
   
   cl = parallel::makeCluster(cores, outfile="")
@@ -768,4 +766,74 @@ ppc_subject("S4", mandarino, ypred, lmin, lmax)
 # ppc_subject("S12", mandarino, ypred, lmin, lmax)
 
 ppc_full(mandarino, ypred)
+```
+
+```{r mandarino_squared}
+mandarino_fpca$peak = ifelse(mandarino_fpca$time >= 7 & mandarino_fpca$time <= 13, 1, 0)
+mandarino_fpca = cbind(mandarino_fpca, time2 = mandarino_fpca$time^2)
+mandarino_fpca %>% head
+load("fitBaseBest.Rdata")
+save.image("comparison.Rdata")
+```
+
+```{r save_img}
+{
+    # Salvo i valori previsti in attesa di confrontarli dopo con una
+    # funzione di confronto opportuna
+    print("--------- kf finale fpca ---------")
+    if(file.exists("predFpca.Rdata")){
+        load("predFpca.Rdata")
+    } else{
+        predFpca = cv_stanvb_subj(fitStanLmerFpca4)
+        save(predFpca, file = "predFpca.Rdata")
+    }
+    
+    print("--------- kf finale base ---------")
+    if(file.exists("predBase.Rdata")){
+        load("predBase.Rdata")
+    } else{
+        predBase = cv_stanvb_subj(fitStanLmer10)
+        save(predBase, file = "predBase.Rdata")
+    }
+}
+```
+
+```{r }
+load("comparison.Rdata")
+source("error_func.R")
+
+errFpca = rep(0,length(predFpca))
+for(subj in 1:length(predFpca)){
+    ytrue = mandarino_fpca$f0[mandarino_fpca$subject == paste0("S", subj)] 
+    for(j in 1:NROW(predFpca[[subj]])){
+        ypred = predFpca[[subj]][j, ]
+        errFpca[subj] = errFpca[subj] + error_func(ytrue, ypred)
+    }
+}
+errFpca = errFpca / 50
+errFpca
+
+errBase = rep(0,length(predBase))
+for(subj in 1:length(predBase)){
+    ytrue = mandarino_fpca$f0[mandarino_fpca$subject == paste0("S", subj)] 
+    for(j in 1:NROW(predBase[[subj]])){
+        ypred = predBase[[subj]][j, ]
+        errBase[subj] = errBase[subj] + error_func(ytrue, ypred)
+    }
+}
+errBase = errBase / 50
+errBase
+
+tabFinal = rbind(
+                 "fPCA" = c(mean(errFpca), sd(errFpca)/sqrt(length(errFpca))),
+                 "Peak" = c(mean(errBase), sd(errBase)/sqrt(length(errBase)))
+) %>% 
+    set_colnames(c("mean", "sd"))
+
+tabFinal %>% 
+    kbl(booktabs = TRUE, format = "latex",
+        caption = "Convalida incrociata tra i due modelli migliori basati sulle fPCA e sulla modellazione del picco, stimati nelle sezioni precendenti.",
+        label = "finalCV") %>% 
+    kable_styling(latex_options = "HOLD_position")
+
 ```
