@@ -102,7 +102,8 @@ plot_repetition = function(repetit, dati = mandarino){
 }
 ```
 ```{r plot_all, fig.cap="\\label{fig:all} Profili di $f_0$ per i soggetti sotto studio, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache = TRUE}
-plot_repetition(0) # Plot di tutti i dati
+g = plot_repetition(0) # Plot di tutti i dati
+ggsave(filename = "plot_rep-1.pdf", plot = g, width=16, height=10, dpi = 200 )
 ```
 
 Dal grafico in Figura \ref{fig:all}, si possono effettuare delle considerazioni preliminari sulle caratteristiche dei dati:
@@ -119,6 +120,28 @@ plot_subject("S1")
 
 ```{r plot_subj2, fig.cap="\\label{fig:subj2}Profili di $f_0$ per il soggetto S2, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache=TRUE}
 plot_subject("S2")
+```
+```{r}
+g3 <- plot_subject("S3")
+g4 <- plot_subject("S4")
+g5 <- plot_subject("S5")
+g6 <- plot_subject("S6")
+g7 <- plot_subject("S7")
+g8 <- plot_subject("S8")
+g9 <- plot_subject("S9")
+g10 <- plot_subject("S10")
+g11 <- plot_subject("S11")
+g12 <- plot_subject("S12")
+ggsave(filename = "plot_subj03-1.pdf", plot = g3, width=16, height=10, dpi = 200 )
+ggsave(filename = "plot_subj04-1.pdf", plot = g4, width=16, height=10, dpi = 200 )
+ggsave(filename = "plot_subj05-1.pdf", plot = g5, width=16, height=10, dpi = 200 )
+ggsave(filename = "plot_subj06-1.pdf", plot = g6, width=16, height=10, dpi = 200 )
+ggsave(filename = "plot_subj07-1.pdf", plot = g7, width=16, height=10, dpi = 200 )
+ggsave(filename = "plot_subj08-1.pdf", plot = g8, width=16, height=10, dpi = 200 )
+ggsave(filename = "plot_subj09-1.pdf", plot = g9, width=16, height=10, dpi = 200 )
+ggsave(filename = "plot_subj10-1.pdf", plot = g10, width=16, height=10, dpi = 200 )
+ggsave(filename = "plot_subj11-1.pdf", plot = g11, width=16, height=10, dpi = 200 )
+ggsave(filename = "plot_subj12-1.pdf", plot = g12, width=16, height=10, dpi = 200 )
 ```
 
 
@@ -200,7 +223,7 @@ plot_all = function(dati = mandarino){
 ```{r plot_all, fig.cap="\\label{fig:all} Profili di $f_0$ per i soggetti sotto studio, al variare delle combinazioni di sillabe pronunciate e del carico cognitivo.", cache = TRUE}
 plot_all()
 #g = plot_all() # Plot di tutti i dati
-#ggsave(filename = "plot_all_medio.pdf", plot = g)
+#ggsave(filename = "plot_all_medio.pdf", plot = g, width=16, height=10, dpi = 200 )
 ```
 ```{r}
 plot_subject_medio("S4")
