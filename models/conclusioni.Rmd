@@ -120,7 +120,7 @@ get_posterior = function(posterior, fpc, syllable1, syllable2, fixed = "none", s
     }
 
     return(list("baseline" = PC_base, "scostamento" = PC_syll,
-                "syllable1" = syllable1, "syllable2" = syllable2, "baseline" = baseline))
+                "syllable1" = syllable1, "syllable2" = syllable2, "ref" = baseline))
 }
 
 plot_posterior = function(post_fpca, ndraws = 500, which = "both"){
@@ -136,17 +136,17 @@ plot_posterior = function(post_fpca, ndraws = 500, which = "both"){
 
     if(which == "both"){
         par(mfrow = c(2, 1))
-        matplot(t(baseline), type = "l", main = paste0("Baseline ", post_fpca$baseline))
+        matplot(t(baseline), type = "l", main = paste0("Baseline ", post_fpca$ref))
         matplot(t(scostamento), type = "l", main = paste0("Scostamento dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2))
         par(mfrow = c(1,1))
     } else if (which == "first"){
         par(mfrow = c(2, 1))
-        matplot(t(baseline)[1:10, ], type = "l", main = paste0("Baseline ", post_fpca$baseline)
+        matplot(t(baseline)[1:10, ], type = "l", main = paste0("Baseline ", post_fpca$ref))
         matplot(t(scostamento)[1:10, ], type = "l", main = paste0("Scostamento prima sillaba dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2))
         par(mfrow = c(1,1))
     } else{
         par(mfrow = c(2, 1))
-        matplot(t(baseline)[11:20, ], type = "l", main = paste0("Baseline ", post_fpca$baseline)
+        matplot(t(baseline)[11:20, ], type = "l", main = paste0("Baseline ", post_fpca$ref))
         matplot(t(scostamento)[11:20, ], type = "l", main = paste0("Scostamento seconda sillaba dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2))
         par(mfrow = c(1,1))
     }
