@@ -63,67 +63,231 @@ get_posterior = function(posterior, fpc, syllable1, syllable2, fixed = "none", s
     PC4 = c("PC4", paste0("PC4:", "syllable", 1:2, c(syllable1, syllable2)))
     PC4 = PC4[PC4 %in% cols]
     
-    if(fixed == "none"){
+    if(fixed == "first"){
         # ---------- Calcolo posteriori delle curve baseline, che contiene fPC1 e tutte le var che non sono modificate dalle sillabe --------- #
-        base_post = posterior[ , base ]             # Intercetta
+        ref_PC1 = c("PC1", paste0("PC1:", "syllable1", syllable1))
+        ref_PC1 = ref_PC1[ref_PC1 %in% cols]
+        ref_PC2 = c("PC2", paste0("PC2:", "syllable1", syllable1))
+        ref_PC2 = ref_PC2[ref_PC2 %in% cols]
+        ref_PC3 = c("PC3", paste0("PC3:", "syllable1", syllable1))
+        ref_PC3 = ref_PC3[ref_PC3 %in% cols]
+        ref_PC4 = c("PC4", paste0("PC4:", "syllable1", syllable1))
+        ref_PC4 = ref_PC4[ref_PC4 %in% cols]
+        
+        ref_PC1_beta = posterior[ , ref_PC1, drop=FALSE]
+        ref_PC2_beta = posterior[ , ref_PC2, drop=FALSE]
+        ref_PC3_beta = posterior[ , ref_PC3, drop=FALSE]
+        ref_PC4_beta = posterior[ , ref_PC4, drop=FALSE]
+
+        eigenf = fpca$phi
+        
+        PC1_ref = matrix(0, nrow = NROW(ref_PC1_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC1_beta)){
+            PC1_ref = PC1_ref +
+                ref_PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+        }
+        PC2_ref = matrix(0, nrow = NROW(ref_PC2_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC2_beta)){
+            PC2_ref = PC2_ref +
+                ref_PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
+        }
+
+        PC3_ref = matrix(0, nrow = NROW(ref_PC3_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC3_beta)){
+            PC3_ref = PC3_ref +
+                ref_PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+        }
+        PC4_ref = matrix(0, nrow = NROW(ref_PC4_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC4_beta)){
+            PC4_ref = PC4_ref +
+                ref_PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
+        }
+
+        ref_int = matrix(posterior[ , base], nrow = NROW(PC1_ref), ncol = NCOL(PC1_ref))
+        PC_ref = ref_int + PC1_ref + PC2_ref + PC3_ref + PC4_ref
+
+        # ---------- Calcolo scostamento delle fPC 2-4 dovuto al variare delle sillabe --------- #
+        cols = colnames(posterior)
+        PC1 = c(paste0("PC1:", "syllable", 2, syllable2))
+        PC1 = PC1[PC1 %in% cols]
+        PC2 = c(paste0("PC2:", "syllable", 2, syllable2))
+        PC2 = PC2[PC2 %in% cols]
+        PC3 = c(paste0("PC3:", "syllable", 2, syllable2))
+        PC3 = PC3[PC3 %in% cols]
+        PC4 = c(paste0("PC4:", "syllable", 2, syllable2))
+        PC4 = PC4[PC4 %in% cols]
+
         PC1_beta = posterior[ , PC1, drop=FALSE]
         PC2_beta = posterior[ , PC2, drop=FALSE]
         PC3_beta = posterior[ , PC3, drop=FALSE]
         PC4_beta = posterior[ , PC4, drop=FALSE]
-        eigenf = fpca$phi
 
-        PC1_base = PC1_beta$PC1 %*% t(eigenf[ , 1 ]) 
-        PC2_base = PC2_beta$PC2 %*% t(eigenf[ , 2 ]) 
-        PC3_base = PC3_beta$PC3 %*% t(eigenf[ , 3 ]) 
-        PC4_base = PC4_beta$PC4 %*% t(eigenf[ , 4 ]) 
-
-        PC1_syll = matrix(0, nrow = NROW(PC1_base), ncol = NCOL(PC1_base))
-        for(cl in colnames(PC1_beta)[-1]){
-            PC1_syll = PC1_syll + PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+        PC1_syll = matrix(0, nrow = NROW(PC1_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC1_beta)){
+            PC1_syll = PC1_syll +
+                PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+        }
+        PC2_syll = matrix(0, nrow = NROW(PC2_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC2_beta)){
+            PC2_syll = PC2_syll +
+                PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
         }
 
-        PC_base = matrix(base_post, nrow = NROW(PC1_base), ncol = NCOL(PC1_base)) +
-            PC1_base + PC2_base + PC3_base + PC4_base + PC1_syll
+        PC3_syll = matrix(0, nrow = NROW(PC3_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC3_beta)){
+            PC3_syll = PC3_syll +
+                PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+        }
+        PC4_syll = matrix(0, nrow = NROW(PC4_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC4_beta)){
+            PC4_syll = PC4_syll +
+                PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
+        }
+        PC_syll = PC1_syll + PC2_syll + PC3_syll + PC4_syll
+        baseline = paste0(syllable1, ":T1")
+    }
+    
+    if(fixed == "second"){
+        # ---------- Calcolo posteriori delle curve baseline, che contiene fPC1 e tutte le var che non sono modificate dalle sillabe --------- #
+        ref_PC1 = c("PC1", paste0("PC1:", "syllable2", syllable2))
+        ref_PC1 = ref_PC1[ref_PC1 %in% cols]
+        ref_PC2 = c("PC2", paste0("PC2:", "syllable2", syllable2))
+        ref_PC2 = ref_PC2[ref_PC2 %in% cols]
+        ref_PC3 = c("PC3", paste0("PC3:", "syllable2", syllable2))
+        ref_PC3 = ref_PC3[ref_PC3 %in% cols]
+        ref_PC4 = c("PC4", paste0("PC4:", "syllable2", syllable2))
+        ref_PC4 = ref_PC4[ref_PC4 %in% cols]
+        
+        ref_PC1_beta = posterior[ , ref_PC1, drop=FALSE]
+        ref_PC2_beta = posterior[ , ref_PC2, drop=FALSE]
+        ref_PC3_beta = posterior[ , ref_PC3, drop=FALSE]
+        ref_PC4_beta = posterior[ , ref_PC4, drop=FALSE]
+
+        eigenf = fpca$phi
+        
+        PC1_ref = matrix(0, nrow = NROW(ref_PC1_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC1_beta)){
+            PC1_ref = PC1_ref +
+                ref_PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+        }
+        PC2_ref = matrix(0, nrow = NROW(ref_PC2_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC2_beta)){
+            PC2_ref = PC2_ref +
+                ref_PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
+        }
+
+        PC3_ref = matrix(0, nrow = NROW(ref_PC3_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC3_beta)){
+            PC3_ref = PC3_ref +
+                ref_PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+        }
+        PC4_ref = matrix(0, nrow = NROW(ref_PC4_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC4_beta)){
+            PC4_ref = PC4_ref +
+                ref_PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
+        }
+
+        ref_int = matrix(posterior[ , base], nrow = NROW(PC1_ref), ncol = NCOL(PC1_ref))
+        PC_ref = ref_int + PC1_ref + PC2_ref + PC3_ref + PC4_ref
 
         # ---------- Calcolo scostamento delle fPC 2-4 dovuto al variare delle sillabe --------- #
-        current1 = paste0("current", syllable1)
-        current1 = current1[current1 %in% cols]
-        current2 = paste0("current", syllable2)
-        current2 = current2[current2 %in% cols]
-        current1_post = posterior[ , current1 ]
-        if(NCOL(current1_post) == 0){
-            current1_post = 0
+        cols = colnames(posterior)
+        PC1 = c(paste0("PC1:", "syllable", 1, syllable1))
+        PC1 = PC1[PC1 %in% cols]
+        PC2 = c(paste0("PC2:", "syllable", 1, syllable1))
+        PC2 = PC2[PC2 %in% cols]
+        PC3 = c(paste0("PC3:", "syllable", 1, syllable1))
+        PC3 = PC3[PC3 %in% cols]
+        PC4 = c(paste0("PC4:", "syllable", 1, syllable1))
+        PC4 = PC4[PC4 %in% cols]
+
+        PC1_beta = posterior[ , PC1, drop=FALSE]
+        PC2_beta = posterior[ , PC2, drop=FALSE]
+        PC3_beta = posterior[ , PC3, drop=FALSE]
+        PC4_beta = posterior[ , PC4, drop=FALSE]
+
+        PC1_syll = matrix(0, nrow = NROW(PC1_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC1_beta)){
+            PC1_syll = PC1_syll +
+                PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
         }
-        current2_post = posterior[ , current2 ]
-        if(NCOL(current2_post) == 0){
-            current2_post = 0
+        PC2_syll = matrix(0, nrow = NROW(PC2_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC2_beta)){
+            PC2_syll = PC2_syll +
+                PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
         }
 
-        PC2_syll = matrix(0, nrow = NROW(PC2_base), ncol = NCOL(PC2_base))
-        for(cl in colnames(PC2_beta)[-1]){
-            PC2_syll = PC2_syll + PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
+        PC3_syll = matrix(0, nrow = NROW(PC3_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC3_beta)){
+            PC3_syll = PC3_syll +
+                PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
         }
-        PC3_syll = matrix(0, nrow = NROW(PC3_base), ncol = NCOL(PC3_base))
-        for(cl in colnames(PC3_beta)[-1]){
-            PC3_syll = PC3_syll + PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+        PC4_syll = matrix(0, nrow = NROW(PC4_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC4_beta)){
+            PC4_syll = PC4_syll +
+                PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
         }
-        PC4_syll = matrix(0, nrow = NROW(PC4_base), ncol = NCOL(PC4_base))
-        for(cl in colnames(PC4_beta)[-1]){
-            PC4_syll = PC4_syll + PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
-        }
-
-        PC_syll =  PC2_syll + PC3_syll + PC4_syll + 
-            cbind(matrix(current1_post, nrow = NROW(PC1_syll), ncol = 10), matrix(0, nrow = NROW(PC1_syll), ncol = 10)) + 
-            cbind(matrix(0, nrow = NROW(PC1_syll), ncol = 10), matrix(current2_post, nrow = NROW(PC1_syll), ncol = 10)) 
-
-        baseline = "T1:T1"
+        PC_syll = PC1_syll + PC2_syll + PC3_syll + PC4_syll
+        baseline = paste0("T1:", syllable2)
     }
 
-    return(list("baseline" = PC_base, "scostamento" = PC_syll,
+    # else if(fixed == "none"){
+    #     # ---------- Calcolo posteriori delle curve baseline, che contiene fPC1 e tutte le var che non sono modificate dalle sillabe --------- #
+    #     base_post = posterior[ , base ]             # Intercetta
+    #     PC1_beta = posterior[ , PC1, drop=FALSE]
+    #     PC2_beta = posterior[ , PC2, drop=FALSE]
+    #     PC3_beta = posterior[ , PC3, drop=FALSE]
+    #     PC4_beta = posterior[ , PC4, drop=FALSE]
+    #     eigenf = fpca$phi
+
+    #     PC1_base = PC1_beta$PC1 %*% t(eigenf[ , 1 ]) 
+    #     PC2_base = PC2_beta$PC2 %*% t(eigenf[ , 2 ]) 
+    #     PC3_base = PC3_beta$PC3 %*% t(eigenf[ , 3 ]) 
+    #     PC4_base = PC4_beta$PC4 %*% t(eigenf[ , 4 ]) 
+
+    #     PC1_syll = matrix(0, nrow = NROW(PC1_base), ncol = NCOL(PC1_base))
+    #     for(cl in colnames(PC1_beta)[-1]){
+    #         PC1_syll = PC1_syll + PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+    #     }
+
+    #     PC_base = matrix(base_post, nrow = NROW(PC1_base), ncol = NCOL(PC1_base)) +
+    #         PC1_base + PC2_base + PC3_base + PC4_base + PC1_syll
+
+    #     # ---------- Calcolo scostamento delle fPC 2-4 dovuto al variare delle sillabe --------- #
+
+    #     if(NCOL(current1_post) == 0){
+    #         current1_post = 0
+    #     }
+    #     current2_post = posterior[ , current2 ]
+    #     if(NCOL(current2_post) == 0){
+    #         current2_post = 0
+    #     }
+
+    #     PC2_syll = matrix(0, nrow = NROW(PC2_base), ncol = NCOL(PC2_base))
+    #     for(cl in colnames(PC2_beta)[-1]){
+    #         PC2_syll = PC2_syll + PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
+    #     }
+    #     PC3_syll = matrix(0, nrow = NROW(PC3_base), ncol = NCOL(PC3_base))
+    #     for(cl in colnames(PC3_beta)[-1]){
+    #         PC3_syll = PC3_syll + PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+    #     }
+    #     PC4_syll = matrix(0, nrow = NROW(PC4_base), ncol = NCOL(PC4_base))
+    #     for(cl in colnames(PC4_beta)[-1]){
+    #         PC4_syll = PC4_syll + PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
+    #     }
+
+    #     PC_syll =  PC2_syll + PC3_syll + PC4_syll + 
+    #         cbind(matrix(current1_post, nrow = NROW(PC1_syll), ncol = 10), matrix(0, nrow = NROW(PC1_syll), ncol = 10)) + 
+    #         cbind(matrix(0, nrow = NROW(PC1_syll), ncol = 10), matrix(current2_post, nrow = NROW(PC1_syll), ncol = 10)) 
+
+    #     baseline = "T1:T1"
+    # }
+
+    return(list("baseline" = PC_ref, "scostamento" = PC_syll,
                 "syllable1" = syllable1, "syllable2" = syllable2, "ref" = baseline))
 }
 
-plot_posterior = function(post_fpca, ndraws = 500, which = "both"){
+plot_posterior = function(post_fpca, ndraws = 300, fixed = "both"){
     # TODO: Docstring for plot_posterior.
 	#
     # @param post_fpca TODO
@@ -134,59 +298,99 @@ plot_posterior = function(post_fpca, ndraws = 500, which = "both"){
     baseline = post_fpca$baseline[idx, ]
     scostamento = post_fpca$scostamento[idx, ]
 
-    if(which == "both"){
+    if(fixed == "both"){
         par(mfrow = c(2, 1))
         matplot(t(baseline), type = "l", main = paste0("Baseline ", post_fpca$ref))
         matplot(t(scostamento), type = "l", main = paste0("Scostamento dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2))
         par(mfrow = c(1,1))
-    } else if (which == "first"){
+    } else if (fixed == "first"){
         par(mfrow = c(2, 1))
         matplot(t(baseline)[1:10, ], type = "l", main = paste0("Baseline ", post_fpca$ref))
-        matplot(t(scostamento)[1:10, ], type = "l", main = paste0("Scostamento prima sillaba dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2))
+        matplot(t(scostamento)[1:10, ], type = "l", main = paste0("Scostamento ", post_fpca$syllable1, " dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2))
         par(mfrow = c(1,1))
     } else{
         par(mfrow = c(2, 1))
-        matplot(t(baseline)[11:20, ], type = "l", main = paste0("Baseline ", post_fpca$ref))
-        matplot(t(scostamento)[11:20, ], type = "l", main = paste0("Scostamento seconda sillaba dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2))
+        matplot(11:20, t(baseline)[11:20, ], type = "l", main = paste0("Baseline ", post_fpca$ref))
+        matplot(11:20, t(scostamento)[11:20, ], type = "l", main = paste0("Scostamento ", post_fpca$syllable2, " dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2))
         par(mfrow = c(1,1))
     }
 }
 ```
 
 ```{r grafici_posteriori}
-post_fpca = get_posterior(posterior, fpca, "T1", "T1")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T1", "T2")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T1", "T3")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T1", "T4")
-plot_posterior(post_fpca, which = "first")
+post_fpca = get_posterior(posterior, fpca, "T1", "T1", fixed = "first")
+p = recordPlot()
+plot_posterior(post_fpca, fixed = "first")
 
-post_fpca = get_posterior(posterior, fpca, "T2", "T1")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T2", "T2")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T2", "T3")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T2", "T4")
-plot_posterior(post_fpca, which = "first")
+post_fpca = get_posterior(posterior, fpca, "T1", "T2", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T1", "T3", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T1", "T4", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
 
-post_fpca = get_posterior(posterior, fpca, "T3", "T1")
-plot_posterior(post_fpca, which = "first")
+post_fpca = get_posterior(posterior, fpca, "T2", "T1", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T2", "T2", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T2", "T3", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T2", "T4", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+
+post_fpca = get_posterior(posterior, fpca, "T3", "T1", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T3", "T2", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T3", "T3", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T3", "T4", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+
+post_fpca = get_posterior(posterior, fpca, "T4", "T1", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T4", "T2", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T4", "T3", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T4", "T4", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+```
+
+```{r grafici_posteriori2}
+post_fpca = get_posterior(posterior, fpca, "T1", "T1", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T2", "T1", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T3", "T1", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T4", "T1", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+
+post_fpca = get_posterior(posterior, fpca, "T1", "T2", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T2", "T2", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
 post_fpca = get_posterior(posterior, fpca, "T3", "T2")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T3", "T3")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T3", "T4")
-plot_posterior(post_fpca, which = "first")
-
-post_fpca = get_posterior(posterior, fpca, "T4", "T1")
-plot_posterior(post_fpca, which = "first")
+plot_posterior(post_fpca, fixed = "second")
 post_fpca = get_posterior(posterior, fpca, "T4", "T2")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T4", "T3")
-plot_posterior(post_fpca, which = "first")
-post_fpca = get_posterior(posterior, fpca, "T4", "T4")
-plot_posterior(post_fpca, which = "first")
+plot_posterior(post_fpca, fixed = "second")
+
+post_fpca = get_posterior(posterior, fpca, "T1", "T3", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T2", "T3", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T3", "T3", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T4", "T3", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+
+post_fpca = get_posterior(posterior, fpca, "T1", "T4", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T2", "T4", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T3", "T4", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T4", "T4", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
 ```
