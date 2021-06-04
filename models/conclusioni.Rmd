@@ -315,9 +315,9 @@ plot_posterior = function(post_fpca, ndraws = 300, fixed = "both"){
     } else{
         par(mfrow = c(2, 1))
         matplot(11:20, t(baseline)[11:20, ], type = "l", main = paste0("Baseline ", post_fpca$ref), col = "grey")
-        lines(rowMeans(t(baseline))[11:20])
+        lines(11:20, rowMeans(t(baseline))[11:20])
         matplot(11:20, t(scostamento)[11:20, ], type = "l", main = paste0("Scostamento ", post_fpca$syllable2, " dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2), col = "grey")
-        lines(rowMeans(t(scostamento))[11:20])
+        lines(11:20, rowMeans(t(scostamento))[11:20])
         par(mfrow = c(1,1))
     }
 }
