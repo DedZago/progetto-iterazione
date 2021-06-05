@@ -438,3 +438,92 @@ plot_posterior(post_fpca, fixed = "second")
 post_fpca = get_posterior(posterior, fpca, "T4", "T4", fixed = "second")
 plot_posterior(post_fpca, fixed = "second")
 ```
+
+
+
+# facciamo i maiali
+
+```{r}
+baseline1 <- get_posterior(posterior, fpca, "T1", "T1", fixed = "first")$baseline
+baseline2 <- get_posterior(posterior, fpca, "T1", "T1", fixed = "second")$baseline
+baseline <- cbind(baseline1[,1:10], baseline2[,11:20])
+
+matplot(t(baseline), type = "l", col = "grey")
+lines(rowMeans(t(baseline)), col = 2, lwd = 2)
+```
+## (T2, T2)
+
+```{r}
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
+## (T2, T3)
+
+```{r}
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
+## (T2, T4) (no mediazione)
+
+```{r}
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
+
+## (T3, T2) (no mediazione)
+
+```{r}
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
+## (T3, T3) (mediazione)
+
+```{r}
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
+## (T3, T4) (no mediazione)
+
+```{r}
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
+
+## (T4, T2) (no mediazione)
+
+```{r}
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
+
+## (T4, T3) (mediazione)
+
+```{r}
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
+
+## (T4, T4) (no mediazione)
+
+```{r}
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
