@@ -472,7 +472,8 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
-matplot(t(scostamento), type = "l", col = "grey")
+
+matplot(t(scostamento + baseline), type = "l", col = "grey")
 lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 
@@ -527,3 +528,35 @@ scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")
 matplot(t(scostamento), type = "l", col = "grey")
 lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
+
+
+
+
+
+## BOh rob-e
+
+```{r}
+baseline_matrix <- matrix(NA, ncol = 8, nrow = 16)
+colnames(baseline_matrix) <- as.factor(7:14)
+k = 1
+
+baseline_comune <- cbind(get_posterior(posterior, fpca, "T1", "T1", fixed = "first")$baseline[,7:10],
+                        get_posterior(posterior, fpca, "T1", "T1", fixed = "second")$baseline[,11:14])
+
+for(i in c("T1", "T2", "T3", "T4")){
+    for(j in c("T1", "T2", "T3", "T4")){
+        cat(paste(i, j, sep = "-"), "\n")
+        baseline <- cbind(get_posterior(posterior, fpca, "T1", j, fixed = "first")$scostamento[,7:10],
+                        get_posterior(posterior, fpca, i, "T1", fixed = "second")$scostamento[,11:14])
+        baseline_matrix[k,] <- rowMeans(t(baseline + baseline_comune))
+        k = k + 1
+    }
+}
+plot(colMeans(baseline_matrix), type = "l", main = "Media della parte centrale di ogni combinazione di sillabe", ylab = "f0")
+
+par(mfrow = c(4,4))
+for(i in 1:nrow(baseline_matrix)){
+    plot(7:14, baseline_matrix[i,], col = i, type = "l", xlab = "tempo", ylab = "", ylim = c(175, 275))
+}
+```
+
