@@ -484,7 +484,7 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
 
-matplot(t(scostamento + baseline), type = "l", col = "grey")
+matplot(t(scostamento), type = "l", col = "grey")
 lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 
@@ -541,7 +541,23 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 
 
+## (T3, T3) e (T4, T3) messi viciny
 
+```{r}
+scostamento1 <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+
+scostamento2 <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
+
+
+png("mediazione.png", 2000, 1200, res = 150)
+par(mfrow = c(1,2))
+matplot(t(scostamento1), type = "l", col = "grey")
+lines(rowMeans(t(scostamento1)), col = 2, lwd = 2)
+matplot(t(scostamento2), type = "l", col = "grey")
+lines(rowMeans(t(scostamento2)), col = 2, lwd = 2)
+```
 
 
 ## BOh rob-e
