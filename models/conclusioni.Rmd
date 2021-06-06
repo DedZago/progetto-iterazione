@@ -290,54 +290,58 @@ get_posterior = function(posterior, fpc, syllable1, syllable2, fixed = "none", s
                 "syllable1" = syllable1, "syllable2" = syllable2, "ref" = baseline))
 }
 
-plot_posterior = function(post_fpca, ndraws = 4000, fixed = "both"){
+plot_posterior = function(post_fpca, ndraws = 4000, fixed = "first"){
     # TODO: Docstring for plot_posterior.
 	#
     # @param post_fpca TODO
 	#
     # @return TODO
+    require(ggpubr)
 
     idx = sample(1:NROW(post_fpca$baseline), ndraws)
     baseline = post_fpca$baseline[idx, ]
     scostamento = post_fpca$scostamento[idx, ]
 
-    if(fixed == "both"){
-        par(mfrow = c(2, 1))
-        matplot(t(baseline), type = "l", main = paste0("Baseline ", post_fpca$ref), col = "grey")
-        lines(rowMeans(t(baseline)))
-        matplot(t(scostamento), type = "l", main = paste0("Scostamento dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2), col = "grey")
-        lines(rowMeans(t(scostamento)))
-        par(mfrow = c(1,1))
-    } else if (fixed == "first"){
-        scostamento_plot = t(scostamento)[1:10, ]
-        meanf = rowMeans(scostamento_plot)
-        qtl = apply(scostamento_plot, 1, quantile, p=c(0.25, 0.975))
-        df = data.frame(cbind(1:10, meanf, t(qtl)))
-        colnames(df) = c("time", "mean", "lcl", "ucl")
-        df %>%
-            ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2)
-        par(mfrow = c(2, 1))
-        matplot(t(baseline)[1:10, ], type = "l", main = paste0("baseline ", post_fpca$ref), col = "grey")
-        lines(rowMeans(t(baseline))[1:10])
-        scostamento_plot = t(scostamento)[1:10, ]
-        meanf = rowMeans(scostamento_plot)
-        qtl = apply(scostamento_plot, 1, quantile, p=c(0.25, 0.975))
-        df = data.frame(cbind(1:10, meanf, t(qtl)))
-        colnames(df) = c("time", "mean", "lcl", "ucl")
-        df %>%
-            ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2)
-    } else{
-        par(mfrow = c(2, 1))
-        matplot(11:20, t(baseline)[11:20, ], type = "l", main = paste0("Baseline ", post_fpca$ref), col = "grey")
-        lines(11:20, rowMeans(t(baseline))[11:20])
-        matplot(11:20, t(scostamento)[11:20, ], type = "l", main = paste0("Scostamento ", post_fpca$syllable2, " dovuto a ", post_fpca$syllable1, ":", post_fpca$syllable2), col = "grey")
-        lines(11:20, rowMeans(t(scostamento))[11:20], col = "blue")
-        par(mfrow = c(1,1))
+    if (fixed == "first"){
+        time = 1:10
+        titolo = paste0("Anticipazione dovuta a ", post_fpca$syllable2)
+    } else {
+        time = 11:20
+        titolo = paste0("Trascinamento dovuto a ", post_fpca$syllable1)
     }
+
+    baseline_plot = t(baseline)[time, ]
+    meanf = rowMeans(baseline_plot)
+    qtl = apply(baseline_plot, 1, quantile, p=c(0.025, 0.975))
+    df1 = data.frame(cbind(time, meanf, t(qtl)))
+    colnames(df1) = c("time", "mean", "lcl", "ucl")
+
+    # Plot baseline
+    plot1 <-
+        ggplot(df1, aes(x = time))+
+        geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+        geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+        ggtitle("Frequenza baseline") +
+        theme(plot.title = element_text(hjust = 0.5))
+
+    scostamento_plot = t(scostamento)[time, ]
+    meanf = rowMeans(scostamento_plot)
+    qtl = apply(scostamento_plot, 1, quantile, p=c(0.025, 0.975))
+    df2 = data.frame(cbind(time, meanf, t(qtl)))
+    colnames(df2) = c("time", "mean", "lcl", "ucl")
+
+    
+    # Plot scostamento
+    plot2 <-
+        ggplot(df2, aes(x = time))+
+        geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+        geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+        ggtitle(titolo) +
+        theme(plot.title = element_text(hjust = 0.5))
+        
+
+    ggarrange(plot1, plot2, ncol = 1, nrow = 2)
+    return(list("baseline" = plot1, "scostamento" = plot2))
 }
 ```
 
@@ -346,20 +350,29 @@ post_fpca = get_posterior(posterior, fpca, "T1", "T1", fixed = "first")
 p = recordPlot()
 plot_posterior(post_fpca, fixed = "first")
 
-png("first-t2.png", 2000, 1200, res = 150)
 post_fpca = get_posterior(posterior, fpca, "T1", "T2", fixed = "first")
-plot_posterior(post_fpca, fixed = "first")
-dev.off()
+temp2 = plot_posterior(post_fpca, fixed = "first")
 
-png("first-t3.png", 2000, 1200, res = 150)
 post_fpca = get_posterior(posterior, fpca, "T1", "T3", fixed = "first")
-plot_posterior(post_fpca, fixed = "first")
-dev.off()
+temp3 = plot_posterior(post_fpca, fixed = "first")
 
-png("first-t4.png", 2000, 1200, res = 150)
 post_fpca = get_posterior(posterior, fpca, "T1", "T4", fixed = "first")
-plot_posterior(post_fpca, fixed = "first")
-dev.off()
+temp4 = plot_posterior(post_fpca, fixed = "first")
+
+ggarrange(temp2$baseline, temp2$scostamento, temp3$scostamento, temp4$scostamento)
+ggsave("anticipazione.png", device = png(), width = 16, height = 10, dpi = 600)
+
+post_fpca = get_posterior(posterior, fpca, "T2", "T1", fixed = "second")
+temp2 = plot_posterior(post_fpca, fixed = "second")
+
+post_fpca = get_posterior(posterior, fpca, "T3", "T1", fixed = "second")
+temp3 = plot_posterior(post_fpca, fixed = "second")
+
+post_fpca = get_posterior(posterior, fpca, "T4", "T1", fixed = "second")
+temp4 = plot_posterior(post_fpca, fixed = "second")
+
+ggarrange(temp2$baseline, temp2$scostamento, temp3$scostamento, temp4$scostamento)
+ggsave("trascinamento.png", device = png(), width = 16, height = 10, dpi = 600)
 
 post_fpca = get_posterior(posterior, fpca, "T2", "T1", fixed = "first")
 plot_posterior(post_fpca, fixed = "first")
@@ -439,8 +452,6 @@ post_fpca = get_posterior(posterior, fpca, "T4", "T4", fixed = "second")
 plot_posterior(post_fpca, fixed = "second")
 ```
 
-
-
 # facciamo i maiali
 
 ```{r}
@@ -448,52 +459,24 @@ baseline1 <- get_posterior(posterior, fpca, "T1", "T1", fixed = "first")$baselin
 baseline2 <- get_posterior(posterior, fpca, "T1", "T1", fixed = "second")$baseline
 baseline <- cbind(baseline1[,1:10], baseline2[,11:20])
 
-meanf = rowMeans(t(baseline))
-qtl = apply(baseline, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-pbase <- df %>%
-            ggplot(aes(x = time))+
-                geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-                geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-                labs(title = "Baseline: (T1, T1)")
-pbase
+matplot(t(baseline), type = "l", col = "grey")
+lines(rowMeans(t(baseline)), col = 2, lwd = 2)
 ```
-
-
 ## (T2, T2)
 
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
-
-meanf = rowMeans(t(scostamento))
-qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-p22 <- df %>%
-        ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9, ) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-            labs(title = "Mediazione di (T2, T2)")
-p22
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 ## (T2, T3)
 
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
-
-meanf = rowMeans(t(scostamento))
-qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-p23 <- df %>%
-        ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-            labs(title = "Mediazione di (T2, T3)")
-p23
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 ## (T2, T4) (no mediazione)
 
@@ -501,17 +484,8 @@ p23
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
 
-
-meanf = rowMeans(t(scostamento))
-qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-p24 <- df %>%
-        ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-            labs(title = "Mediazione di (T2, T4)")
-p24
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 
 ## (T3, T2) (no mediazione)
@@ -519,53 +493,24 @@ p24
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
-
-
-meanf = rowMeans(t(scostamento))
-qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-p32 <- df %>%
-        ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-            labs(title = "Mediazione di (T3, T2)")
-p32
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 ## (T3, T3) (mediazione)
 
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
-
-meanf = rowMeans(t(scostamento))
-qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-p33 <- df %>%
-        ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-            labs(title = "Mediazione di (T3, T3)")
-
-p33
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 ## (T3, T4) (no mediazione)
 
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
-
-meanf = rowMeans(t(scostamento))
-qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-p34 <- df %>%
-        ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-            labs(title = "Mediazione di (T3, T4)")
-p34
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 
 ## (T4, T2) (no mediazione)
@@ -573,17 +518,8 @@ p34
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
-
-meanf = rowMeans(t(scostamento))
-qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-p42 <- df %>%
-        ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-            labs(title = "Mediazione di (T4, T2)")
-p42
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 
 ## (T4, T3) (mediazione)
@@ -591,19 +527,8 @@ p42
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
-
-
-meanf = rowMeans(t(scostamento))
-qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-p43 <- df %>%
-        ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-            labs(title = "Mediazione di (T4, T3)")
-
-p43
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 
 ## (T4, T4) (no mediazione)
@@ -611,59 +536,28 @@ p43
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
-
-meanf = rowMeans(t(scostamento))
-qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
-df = data.frame(cbind(1:20, meanf, t(qtl)))
-colnames(df) = c("time", "mean", "lcl", "ucl")
-p44 <- df %>%
-        ggplot(aes(x = time))+
-            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
-            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
-            labs(title = "Mediazione di (T4, T4)")
-p44
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
 
 
+## (T3, T3) e (T4, T3) messi viciny
 
 ```{r}
-library(cowplot)
+scostamento1 <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+
+scostamento2 <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
 
 
-
-jpeg("mediazione_tutto.png", width = 800, height = 800)
-# 2. Create the plot
-plot_grid(p22, p23, p24,
-          p32, p33, p34, 
-          p42, p43, p44,
-          ncol = 3)
-
-# 3. Close the file
-dev.off()
-mediazione_tutto <- plot_grid(p22, p23, p24,
-          p32, p33, p34, 
-          p42, p43, p44,
-          ncol = 3)
-mediazione_tutto
-
-ggsave(mediazione_tutto, filename = "mediazione_tutto.pdf", device = "pdf", width=16, height=10, dpi = 200
-)
+png("mediazione.png", 2000, 1200, res = 150)
+par(mfrow = c(1,2))
+matplot(t(scostamento1), type = "l", col = "grey")
+lines(rowMeans(t(scostamento1)), col = 2, lwd = 2)
+matplot(t(scostamento2), type = "l", col = "grey")
+lines(rowMeans(t(scostamento2)), col = 2, lwd = 2)
 ```
-
-```{r}
-mediazione_interessante <- plot_grid(p33, p43)
-mediazione_interessante
-
-jpeg("mediazione_interessante.png", width = 800, height = 500)
-# 2. Create the plot
-plot_grid(p33, p43)
-
-# 3. Close the file
-dev.off()
-
-
-```
-
 
 
 ## BOh rob-e
