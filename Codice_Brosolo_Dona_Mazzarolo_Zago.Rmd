@@ -1,0 +1,1839 @@
+---
+title: "Progetto di Statistica Iterazione"
+author: "Silvia Brosolo, Emanuele Donà, Simon Mazzarolo, Daniele Zago"
+date: "6/6/2021"
+output: html_document
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE, engine.opts='-l', tidy=FALSE, fig.width=14, fig.height=8)
+knitr::knit_hooks$set(inline=function(x) prettyNum(round(x,2)))
+```
+
+```{r libs, message=FALSE}
+library(rstanarm)
+library(bayesplot)
+library(tidybayes)
+library(ggplot2)
+library(magrittr)
+library(lme4)
+library(dplyr)
+library(gtools)
+library(loo)
+library(tidyr)
+library(kableExtra)
+```
+
+```{r load_dati}
+load("data/mandarino.RData")
+mandarino$subject = factor(mandarino$subject,
+                           levels = mixedsort(levels(mandarino$subject)))
+```
+
+
+
+# Descrizione del dataset e obiettivi #
+```{r }
+head(mandarino)
+```
+
+L’esperimento è stato ripetuto per ciascun soggetto (S1 - S12) 4 volte (`repetition` 1-4) per ogni carico cognitivo (`cog_load` CL0-CL6) e per tutte le $4^2 = 16$ combinazioni di sillabe.
+Tuttavia, per alcuni soggetti mancano alcune ripetizioni dell'esperimento per motivi non specificati.
+
+
+```{r }
+temp = table(mandarino$subject, mandarino$repetition, mandarino$cog_load)/20
+temp
+```
+
+
+
+# Analisi esplorativa #
+
+```{r}
+plot_subject = function(subj, dati = mandarino){
+    # Plot frequency profiles (f_0) for an individual subject
+	#
+    # @param subj: string containing subject identifier, e.g. "S10"
+    # @param dati: dataset
+	#
+    # @return ggplot2 object
+
+    if(!subj %in% levels(dati$subject)) stop("Subject not found")
+    
+    dati %>%
+        subset(subject == subj) %>%
+        ggplot(aes(x = time, y = f0)) +
+        geom_line(aes(group = repetition, color = factor(repetition))) + 
+        facet_grid(cog_load ~  syllable1*syllable2) +
+        guides(color=guide_legend(title="repetition"))
+}
+
+plot_repetition = function(repetit, dati = mandarino){
+    # Plot frequency profiles (f_0) for an individual subject
+	#
+    # @param repetit: integer containing repetition number, e.g. 4
+    # @param dati: dataset
+	#
+    # @return ggplot2 object
+    dati$subject = factor(dati$subject, levels = mixedsort(levels(dati$subject)))
+    if(!repetit %in% unique(dati$repetition)){
+        # Plot everything if repetition is not present
+        dati %>%
+            ggplot(aes(x = time, y = f0)) +
+            geom_line(aes(group = interaction(subject,repetition), color = subject)) + 
+            facet_grid(cog_load ~  syllable1*syllable2) +
+            guides(color=guide_legend(title="Subject"))
+    } else{
+        dati %>%
+            subset(repetition == repetit) %>%
+            ggplot(aes(x = time, y = f0)) +
+            geom_line(aes(group = interaction(subject,repetition), color = subject)) + 
+            facet_grid(cog_load ~  syllable1*syllable2) +
+            guides(color=guide_legend(title="Subject"))
+    }    
+}
+```
+
+```{r plot_subj, cache=TRUE}
+plot_subject("S1")
+plot_subject("S2")
+plot_subject("S3")
+plot_subject("S4")
+plot_subject("S5")
+plot_subject("S6")
+plot_subject("S7")
+plot_subject("S8")
+plot_subject("S9")
+plot_subject("S10")
+plot_subject("S11")
+plot_subject("S12")
+```
+
+```{r plot_rep,  cache=TRUE}
+plot_repetition(1)
+plot_repetition(2)
+plot_repetition(3)
+plot_repetition(4)
+```
+
+
+
+# Preprocessing #
+
+* Si aggiunge una variabile `current` che indica a quale sillaba (`syllable1` o `syllable2`) corrisponde la riga dell'osservazione, e `peak` per modellare i tempi centrali.
+```{r preproc1}
+mandarino$current = ifelse(mandarino$time <= 10, mandarino$syllable1, mandarino$syllable2)
+mandarino$current = levels(mandarino$syllable1)[mandarino$current]
+
+mandarino$peak = ifelse(mandarino$time >= 7 & mandarino$time <= 13, 1, 0)
+```
+
+* Lavoriamo con la media delle quattro ripetizioni per ciascun soggetto.
+
+```{r preproc2}
+mandarino %>%
+    group_by_at(setdiff(colnames(mandarino), c("repetition", "f0"))) %>%
+    summarize(f0 = mean(f0)) %>%
+    ungroup() -> mandarino
+```
+
+```{r save}
+save(mandarino, file = "../data/mandarino-proc.RData")
+```
+
+Il dataset consiste delle seguenti variabili:
+
+```{r head}
+head(mandarino)
+```
+
+Grafico di $f_0$ in media
+
+```{r plot_medio}
+plot_subject_medio = function(subj, dati = mandarino){
+    # Plot frequency profiles (f_0) for an individual subject
+	#
+    # @param subj: string containing subject identifier, e.g. "S10"
+    # @param dati: dataset
+	#
+    # @return ggplot2 object
+
+    if(!subj %in% levels(dati$subject)) stop("Subject not found")
+    
+    dati %>%
+        subset(subject == subj) %>%
+        ggplot(aes(x = time, y = f0)) +
+        geom_line(aes(color = 2)) + 
+        facet_grid(cog_load ~  syllable1*syllable2) +
+        guides(color=guide_legend(title="Subject"))
+}
+
+
+plot_all = function(dati = mandarino){
+    # Plot frequency profiles from the dataset with the mean for each subject
+    #@return ggplot2 object
+    dati$subject = factor(dati$subject, levels = mixedsort(levels(dati$subject)))
+        dati %>%
+            ggplot(aes(x = time, y = f0)) +
+            geom_line(aes(group = subject, color = subject)) + 
+            facet_grid(cog_load ~  syllable1*syllable2) +
+            guides(color=guide_legend(title="Subject"))
+}
+
+plot_all()
+plot_subject_medio("S2")
+```
+
+
+
+# Modello lineare con effetti misti #
+
+Funzioni per fare i grafici delle previsioni:
+
+```{r pred_plot, echo=FALSE}
+ppc_subject = function(subj, dati, ypred, ci.low = NULL, ci.upper = NULL){
+    # Plot frequency profiles (f_0) for an individual subject with predictions
+    #
+    # @param subj: string containing subject identifier, e.g. "S10"
+    # @param datiPred: dataset with an additional `ypred` column
+    #
+    # @return ggplot2 object, plot with average effect over different repetitions
+
+    if(!subj %in% levels(dati$subject)) stop("Subject not found")
+    brks  = c("y", "E(yrep|y)")
+
+    datiPred = cbind(dati, "ypred" = ypred)
+    if(!is.null(ci.low) & !is.null(ci.upper)){
+        datiPred = cbind(datiPred, "ci.low" = ci.low, "ci.upper" = ci.upper)
+        datiPred %>%
+            subset(subject == subj) %>%
+            ggplot(aes(time))+
+            geom_line(aes(y = f0, colour = brks[1]), alpha=0.9) + 
+            geom_line(aes(y = ypred, colour = brks[2])) + 
+            scale_colour_manual("", 
+                      breaks = brks,
+                      values = c("black", "blue")) +
+            geom_ribbon(aes(ymin = ci.low, ymax = ci.upper), alpha=0.2) +
+            facet_grid(cog_load ~  syllable1*syllable2)
+    } else{
+        datiPred %>%
+            subset(subject == subj) %>%
+            ggplot(aes(time))+
+            geom_line(aes(y = f0), alpha=0.45) + 
+            geom_line(aes(y = ypred), color = "darkblue") + 
+            facet_grid(cog_load ~  syllable1*syllable2)
+    }
+}
+
+
+ppc_full = function(dati, ypred){
+    # Plot frequency profiles (f_0) for an individual subject with predictions
+    #
+    # @param subj: string containing subject identifier, e.g. "S10"
+    # @param datiPred: dataset with an additional `ypred` column
+    #
+    # @return ggplot2 object, plot with average effect over different repetitions
+
+    datiPred = cbind(dati, "ypred" = ypred)
+    datiPred$subject = factor(datiPred$subject,
+                               levels = mixedsort(levels(datiPred$subject)))
+
+    datiPred %>%
+        ggplot(aes(time))+
+        geom_line(aes(y = f0, group = subject, color = subject), alpha=0.8, linetype = 3) + 
+        geom_line(aes(y = ypred, group = subject, color = subject)) + 
+        facet_grid(cog_load ~  syllable1*syllable2)
+}
+```
+
+
+## Multilevel con lme4 ##
+
+```{r lme4_fit}
+if(file.exists("fitLmer.Rdata")){
+    load("fitLmer.Rdata")
+} else{
+    fitLmer = lmer(f0 ~ cog_load + time + current + time:current + syllable1 + syllable2 +
+                   syllable1:syllable2 + time:syllable1 + time:syllable2 +
+                   (1 + time + time:syllable1 + time:syllable2 + time:current|subject),
+               data = mandarino,
+               verbose = 2)
+    save(fitLmer, file="fitLmer.Rdata")
+}
+```
+
+```{r lme4_pred}
+ypred = predict(fitLmer)
+ppc_subject("S1", mandarino, ypred)
+ppc_subject("S2", mandarino, ypred)
+ppc_subject("S3", mandarino, ypred)
+ppc_subject("S4", mandarino, ypred)
+
+ppc_full(mandarino, ypred)
+```
+
+Aggiunta tempo al quadrato.
+
+```{r lme4_fit time2}
+datasq = cbind(mandarino, time2 = mandarino$time^2)
+fitLmer2 = lmer(f0 ~ cog_load + time + time2 + current + time:current + time2:current + syllable1                  + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 +
+                   (1 + time + time:syllable1 + time:syllable2 + time:current|subject),
+               data = datasq,
+               verbose = 2)
+
+ypred2 = predict(fitLmer2)
+ppc_subject("S1", mandarino, ypred2)
+ppc_subject("S2", mandarino, ypred2)
+ppc_subject("S3", mandarino, ypred2)
+ppc_subject("S4", mandarino, ypred2)
+```
+
+Aggiunta tempo al cubo.
+
+```{r lme4_fit time3}
+datacubed = cbind(datasq, time3 = mandarino$time^3)
+fitLmer3 = lmer(f0 ~ cog_load + time + time2 + time3 + current + time:current + time2:current +                   time3:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 +                    time:syllable2 +
+                   (1 + time + time:syllable1 + time:syllable2 + time:current|subject),
+               data = datacubed,
+               verbose = 2)
+ypred3 = predict(fitLmer3)
+ppc_subject("S1", mandarino, ypred3)
+ppc_subject("S2", mandarino, ypred3)
+ppc_subject("S3", mandarino, ypred3)
+ppc_subject("S4", mandarino, ypred3)
+```
+
+```{r lme4_fit}
+fitLmer4 = lmer(f0 ~ cog_load + time + time2 + current + time:current + time2:current +                    + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                  (1 + time + time:syllable1 + time:syllable2 + time:current|subject),
+               data = datasq,
+               verbose = 2)
+```
+
+
+## Multilevel con Stan ##
+
+```{r stan_lme_fit}
+# Aggiungo tempo^2 chiamandolo time2
+datasq = cbind(mandarino, time2 = mandarino$time^2)
+
+if(file.exists("fitStanLmer.Rdata")){
+    load("fitStanLmer.Rdata")
+} else{
+    fitStanLmer = stan_glmer(f0 ~ cog_load + time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 +
+                             (1 + time:syllable1 + time:syllable2 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE)
+    save(fitStanLmer, file="fitStanLmer.Rdata")
+}
+```
+```{r stan_lme_pred}
+ypredStanLmer = posterior_predict(fitStanLmer, draws = 100)
+ypred = apply(ypredStanLmer, 2, mean)
+stdev = apply(ypredStanLmer, 2, sd)
+lmin = ypred - qnorm(1 - 0.05/2) * stdev
+lmax = ypred + qnorm(1 - 0.05/2) * stdev
+
+ppc_subject("S1", mandarino, ypred, lmin, lmax)
+ppc_subject("S2", mandarino, ypred, lmin, lmax)
+ppc_subject("S3", mandarino, ypred, lmin, lmax)
+ppc_subject("S4", mandarino, ypred, lmin, lmax)
+
+ppc_full(mandarino, ypred)
+```
+
+
+### Selezione del modello con CV ###
+
+```{r fit2}
+if(file.exists("fitStanLmer2.Rdata")){
+    load("fitStanLmer2.Rdata")
+} else{
+    fitStanLmer2 = stan_glmer(f0 ~ cog_load + time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:syllable1 + time:syllable2 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+    save(fitStanLmer2, file="fitStanLmer2.Rdata")
+}
+
+cores  = min(4, parallel::detectCores())
+if(file.exists("../models/multilevel-base_files/kf1.RData")){
+    load("../models/multilevel-base_files/kf1.RData")
+}else{
+    set.seed(2021-05-13)
+    kf1 <- kfold(fitStanLmer2, K = 10, cores = cores)
+    save(kf1, file = "../models/multilevel-base_files/kf1.RData")
+}
+
+kf1
+```
+
+Tolta la variabile cog_load:
+```{r fit3}
+fitStanLmer3 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:syllable1 + time:syllable2 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13
+                            )
+if(file.exists("../models/multilevel-base_files/kf3.RData")){
+    load("../models/multilevel-base_files/kf3.RData")
+}else{
+    set.seed(2021-05-13)
+    kf3 <- kfold(fitStanLmer3, K = 10, cores = cores)
+    save(kf3, file = "../models/multilevel-base_files/kf3.RData")
+}
+
+kf3
+```
+
+Tolto l'effetto del time2 perchè ha il valore più basso:
+```{r fit4}
+fitStanLmer4 = stan_glmer(f0 ~ time  + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:syllable1 + time:syllable2 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf4.RData")){
+    load("../models/multilevel-base_files/kf4.RData")
+}else{
+    set.seed(2021-05-13)
+    kf4 <- kfold(fitStanLmer4, K = 10, cores = cores)
+    save(kf4, file = "../models/multilevel-base_files/kf4.RData")
+}
+
+kf4
+```
+
+```{r fit5}
+fitStanLmer5 = stan_glmer(f0 ~ time  + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:syllable1 + time:syllable2 + time:current + time:peak|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf5.RData")){
+    load("../models/multilevel-base_files/kf5.RData")
+}else{
+    set.seed(2021-05-13)
+    kf5 <- kfold(fitStanLmer5, K = 10, cores = cores)
+    save(kf5, file = "../models/multilevel-base_files/kf5.RData")
+}
+
+kf5
+```
+
+Si prova a fare il migliore ma con gli effetti casuali indipendenti a blocchi:
+```{r fit6}
+fitStanLmer6 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf6.RData")){
+    load("../models/multilevel-base_files/kf6.RData")
+}else{
+    set.seed(2021-05-13)
+    kf6 <- kfold(fitStanLmer6, K = 10, cores = cores)
+    save(kf6, file = "../models/multilevel-base_files/kf6.RData")
+}
+
+kf6
+```
+
+Si prova a togliere qualche effetto casuale dato che hano tutti valori molto bassi, esclusa l'intercetta:
+```{r fit7}
+fitStanLmer7 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf7.RData")){
+    load("../models/multilevel-base_files/kf7.RData")
+}else{
+    set.seed(2021-05-13)
+    kf7 <- kfold(fitStanLmer7, K = 10, cores = cores)
+    save(kf7, file = "../models/multilevel-base_files/kf7.RData")
+}
+
+kf7
+```
+
+```{r fit8}
+fitStanLmer8 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1 + time:current + time:peak|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf8.RData")){
+    load("../models/multilevel-base_files/kf8.RData")
+}else{
+    set.seed(2021-05-13)
+    kf8 <- kfold(fitStanLmer8, K = 10, cores = cores)
+    save(kf8, file = "../models/multilevel-base_files/kf8.RData")
+}
+
+kf8
+```
+
+```{r fit9}
+fitStanLmer9 = stan_glmer(f0 ~ time + time2 + current + time:current + time2:current + time:syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject) + (0 + time:peak),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf9.RData")){
+    load("../models/multilevel-base_files/kf9.RData")
+}else{
+    set.seed(2021-05-13)
+    kf9 <- kfold(fitStanLmer9, K = 10, cores = cores)
+    save(kf9, file = "../models/multilevel-base_files/kf9.RData")
+}
+
+kf9
+```
+
+Tolta time2 dal modello migliore (fitstanlmer6)
+```{r fit10}
+fitStanLmer10 = stan_glmer(f0 ~ time + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf10.RData")){
+    load("../models/multilevel-base_files/kf10.RData")
+}else{
+    set.seed(2021-05-13)
+    kf10 <- kfold(fitStanLmer10, K = 10, cores = cores)
+    save(kf10, file = "../models/multilevel-base_files/kf10.RData")
+}
+
+kf10
+```
+
+Tolte syllable1 e syllable2 e syllable1:syllable2
+```{r fit11}
+fitStanLmer11 = stan_glmer(f0 ~ time + current + time:current + time2:current + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf11.RData")){
+    load("../models/multilevel-base_files/kf11.RData")
+}else{
+    set.seed(2021-05-13)
+    kf11 <- kfold(fitStanLmer11, K = 10, cores = cores)
+    save(kf11, file = "../models/multilevel-base_files/kf11.RData")
+}
+
+kf11
+```
+
+```{r fit12}
+fitStanLmer12 = stan_glmer(f0 ~ current + time:current + time2:current + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf12.RData")){
+    load("../models/multilevel-base_files/kf12.RData")
+}else{
+    set.seed(2021-05-13)
+    kf12 <- kfold(fitStanLmer12, K = 10, cores = cores)
+    save(kf12, file = "../models/multilevel-base_files/kf12.RData")
+}
+
+kf12
+```
+
+```{r fit13}
+fitStanLmer13 = stan_glmer(f0 ~ current + time:current + time2:current +
+                               time:syllable1 + time:syllable2 + time:syllable1:syllable2 +
+                               peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         algorithm = "meanfield",
+                         QR = TRUE,
+                         seed = 2021-05-13)
+if(file.exists("../models/multilevel-base_files/kf13.RData")){
+    load("../models/multilevel-base_files/kf13.RData")
+}else{
+    set.seed(2021-05-13)
+    kf13 <- kfold(fitStanLmer13, K = 10, cores = cores)
+    save(kf13, file = "../models/multilevel-base_files/kf13.RData")
+}
+
+kf13
+```
+
+```{r loo_compare}
+loo_compare(kf13, kf12, kf11, kf10, kf9, kf8, kf7, kf6, kf5, kf4, kf3, kf1)
+```
+
+
+Modello migliore stimato con HMC:
+
+```{r hmc}
+if(file.exists("MCMC_best_multilevel.RData")){
+    load("MCMC_best_multilevel.RData")
+} else{
+    best_multilevel = stan_glmer(f0 ~ time + current + time:current + time2:current + syllable1 + syllable2 + syllable1:syllable2 + time:syllable1 + time:syllable2 + time:peak + time2:peak + peak:syllable1 + peak:syllable2 + peak:syllable1:syllable2 + 
+                             (1|subject) + (0 + time:syllable1|subject) + (0 + time:syllable2|subject) + (0 + time:current|subject),
+                         data = datasq,
+                         QR = TRUE,
+                         seed = 2021-05-24)
+    save(best_multilevel, file="MCMC_best_multilevel.RData")
+}
+
+summary(best_multilevel)
+
+ypred_best = posterior_predict(best_multilevel, draws = 100)
+ypred = apply(ypred_best, 2, mean)
+stdev = apply(ypred_best, 2, sd)
+lmin = ypred - qnorm(1 - 0.05/2) * stdev
+lmax = ypred + qnorm(1 - 0.05/2) * stdev
+
+ppc_subject("S1", mandarino, ypred, lmin, lmax)
+ppc_subject("S2", mandarino, ypred, lmin, lmax)
+ppc_subject("S3", mandarino, ypred, lmin, lmax)
+ppc_subject("S4", mandarino, ypred, lmin, lmax)
+
+ppc_full(mandarino, ypred)
+
+plot(best_multilevel, plotfun = "dens_overlay", pars=names(best_multilevel$coefficients)[1:20])
+```
+
+
+
+# Componenti principali funzionali #
+
+## Stima delle fPCA ##
+
+Costruiamo il dataset in formato "largo" per la stima delle fPCA:
+```{r fpca_data}
+mandarino_wide = spread(mandarino[ , -6 ], time, "f0")
+Y = as.matrix(mandarino_wide[ , 5:(NCOL(mandarino_wide)) ])     # Funzioni osservate
+
+mandarino$peak = ifelse(mandarino$time >= 7 & mandarino$time <= 13, 1, 0)
+```
+
+```{r fpca_fve, echo=FALSE}
+# Threshold di varianza per le fPCA
+fve = 0.99
+```
+
+Stima delle funzioni principali che spieghino il `r 100*fve`\% della varianza funzionale:
+
+```{r fpca_base}
+library(fdapace)
+
+Y_list = lapply(seq_len(NROW(Y)), function(i) Y[i,])
+t_list = lapply(seq_len(NROW(Y)), function(i) 1:20)
+
+fpca = FPCA(Ly = Y_list, Lt = t_list, optns = list(FVEthreshold = fve))
+K = fpca$selectK
+
+ypred = predict(fpca, Y_list, t_list)
+{
+    # Confronto curve osservate con ricostruite tramite fPCA
+    par(mfrow = c(2,1))
+    matplot(t(Y), type = "l", main = "Funzioni osservate")
+    matplot(t(ypred$predCurves), type = "l",
+            main = paste0("Funzioni ricostruite con ", K, " fPC"))
+    par(mfrow = c(1,1))
+}
+
+# Autofunzioni stimate
+eigenFPCA = fpca$phi                                 
+matplot(eigenFPCA, type = "l", main = "Funzioni principali")
+legend("topleft", legend=paste0("fPC ", 1:K), col=1:K,cex=0.8, fill=1:K)
+```
+
+Variabilità delle funzioni principali rispetto alla rimozione dei soggetti.
+
+```{r fpca_var}
+mandarino$subject = factor(x = mandarino$subject, levels = mixedsort(levels(mandarino$subject)))
+fpca_list = vector(mode = "list", length = length(unique(mandarino$subject)))
+i = 1
+for(subj in unique(mandarino$subject)){
+    idx = mandarino_wide$subject == subj
+    Y_sub = as.matrix(mandarino_wide[!idx , 5:(NCOL(mandarino_wide)) ])             # funzioni senza il soggetto
+    Y_list_sub = lapply(seq_len(NROW(Y_sub)), function(i) Y_sub[i,])
+    t_list_sub = lapply(seq_len(NROW(Y_sub)), function(i) 1:20)
+    fpca_list[[i]] = FPCA(Ly = Y_list_sub, Lt = t_list_sub, optns = list(FVEthreshold = fve))
+    i = i+1
+}
+
+plot_phi_list = function(fpca_list, m = 1){
+    # Plot delle funzioni principali sovrapposte da una lista di oggetti fpca
+    #
+    # @param fpca_list: lista di fpca
+    # @param m: ordine della funzione principale da plottare
+    #
+    # @return oggetto plot contenente il grafico sovrapposto delle fpc
+    
+    ymax = max(unlist(lapply(fpca_list, function(obj) max(obj$phi))))
+    ymin = min(unlist(lapply(fpca_list, function(obj) min(obj$phi))))
+
+    plot(fpca_list[[1]]$obsGrid, ylim = c(ymin, ymax), type = "n", xlab = "t", ylab = "f0", main = paste0("fPC ", m))
+    for(i in 1:length(fpca_list)){
+        lines(fpca_list[[i]]$obsGrid, fpca_list[[i]]$phi[ , m ])
+    }
+}
+
+par(mfrow = c(2,2))
+plot_phi_list(fpca_list, 1)
+plot_phi_list(fpca_list, 2)
+plot_phi_list(fpca_list, 3)
+plot_phi_list(fpca_list, 4)
+par(mfrow = c(1,1))
+
+# Aggiungo le autofunzioni come covariate al dataset
+eigenColumns = matrix(0, nrow = NROW(mandarino), ncol = K)
+for(lv in 1:length(levels(mandarino$subject))){
+    sj = levels(mandarino$subject)[lv]
+    idx = (mandarino$subject == sj)
+    print(sum(idx))
+    for(k in 1:K){
+        eigenColumns[idx, k] = rep(fpca_list[[lv]]$phi[ , k ], sum(idx) / 20)
+    }
+}
+
+mandarino_fpca = cbind(mandarino, eigenColumns)
+colnames(mandarino_fpca) = c(colnames(mandarino), paste0("PC", 1:K))
+```
+
+
+## Modello con fPCA come covariate ##
+
+```{r stan_lme_fit}
+if(file.exists("fitStanLmerFpca.Rdata")){
+    load("fitStanLmerFpca.Rdata")
+} else{
+    fitStanLmerFpca = stan_glmer(f0 ~ cog_load + current +
+                              PC1 + PC2 + PC3 + PC4 +
+                              PC1:syllable1 + PC1:syllable2 +
+                              PC2:syllable1 + PC2:syllable2 +
+                              PC3:syllable1 + PC3:syllable2 +
+                              PC4:syllable1 + PC4:syllable2 +
+                              (1 | subject) +
+                              (0 + current|subject) +
+                              (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                              (0 + PC1:syllable1 | subject) +
+                              (0 + PC1:syllable2 | subject) +
+                              (0 + PC2:syllable1 | subject) +
+                              (0 + PC2:syllable2 | subject) +
+                              (0 + PC3:syllable1 | subject) +
+                              (0 + PC3:syllable2 | subject) +
+                              (0 + PC4:syllable1 | subject) +
+                              (0 + PC4:syllable2 | subject) 
+                              ,
+                         data = mandarino_fpca,
+                    algorithm = "meanfield",
+                    prior_covariance = decov(regularization = 2),
+                    iter = 10000,
+                    QR = TRUE)
+    save(fitStanLmerFpca, file="fitStanLmerFpca.Rdata")
+}
+
+summary(fitStanLmerFpca)
+```
+
+```{r stan_lme_ppc}
+plot(fitStanLmerFpca, pars=names(fitStanLmerFpca$coefficients)[1:33])
+```
+
+```{r stan_lme_pred}
+ypredStanLmerFpca = posterior_predict(fitStanLmerFpca, draws = 500)
+ypred = apply(ypredStanLmerFpca, 2, mean)
+stdev = apply(ypredStanLmerFpca, 2, sd)
+lmin = apply(ypredStanLmerFpca, 2, function(col) quantile(col, p = 0.05))
+lmax = apply(ypredStanLmerFpca, 2, function(col) quantile(col, p = 0.95))
+
+ppc_subject("S1", mandarino, ypred, lmin, lmax)
+ppc_subject("S2", mandarino, ypred, lmin, lmax)
+ppc_subject("S3", mandarino, ypred, lmin, lmax)
+ppc_subject("S4", mandarino, ypred, lmin, lmax)
+ppc_subject("S5", mandarino, ypred, lmin, lmax)
+ppc_subject("S6", mandarino, ypred, lmin, lmax)
+ppc_subject("S7", mandarino, ypred, lmin, lmax)
+ppc_subject("S8", mandarino, ypred, lmin, lmax)
+ppc_subject("S9", mandarino, ypred, lmin, lmax)
+ppc_subject("S10", mandarino, ypred, lmin, lmax)
+ppc_subject("S11", mandarino, ypred, lmin, lmax)
+ppc_subject("S12", mandarino, ypred, lmin, lmax)
+
+ppc_full(mandarino, ypred)
+```
+
+
+### Selezione effetti fissi e casuali con k-fold ###
+
+Funzione per CV:
+```{r cv_stanvb}
+cv_stanvb = function(stanfit, K = 10, cores = min(K, 10), draws = 5){
+    require("foreach")
+    require("parallel")
+    require("doParallel")
+    
+    cv_stanvb_fit = function(i, f, data, draws = 5){
+        require("rstanarm")
+        Y_train = data$y_train
+        Y_test = data$y_test
+        cat("Fit modello ", i)
+        fit = stan_glmer(as.formula(f),
+                         data = Y_train,
+                         algorithm = "meanfield",
+                         tol_rel_obj = 0.0001,
+                         elbo_samples = 100,
+                         grad_samples = 1,
+                         iter = 10000,
+                         adapt_delta = 0.8,
+                         QR = TRUE)
+        cat("Fit modello ", i, " completato\n\n")
+
+        cat("Calcolo errore", i, "...\n")
+        oss = Y_test[ , 7]
+        pred = posterior_predict(fit, newdata=Y_test, draws)
+        err = apply(pred, 1, function(row) mean((row - oss)^2))
+        cat("Calcolo errore", i," completato\n\n")
+        return(err)
+    }
+
+    cl = parallel::makeCluster(cores, outfile="")
+    registerDoParallel(cl)
+    out = vector(mode = "list", length = K)
+    dati = stanfit$data
+    rownames(dati) = 1:NROW(dati)
+    f = stanfit$formula
+
+    folds = cut(seq(1,nrow(dati)),breaks=10,labels=FALSE)
+    folds = permute(folds)
+
+    data_list = vector(mode = "list", length = K)
+    for(i in 1:K){
+        idx = folds != i
+        data_list[[i]]$y_train = dati[idx, ]
+        data_list[[i]]$y_test = dati[!idx, ]
+    }
+
+    err_list = foreach(i = 1:K, .inorder = FALSE) %dopar% {
+        cv_stanvb_fit(i, f, data_list[[i]], draws)
+    }
+    parallel::stopCluster(cl)
+    return(err_list)
+}
+```
+
+Selezione del modello
+
+```{r effetti fissi}
+cores  = min(4, parallel::detectCores())
+K = 10                                                      # K-fold cross-validation
+kfcores = ifelse(parallel::detectCores() >= K, K, cores)    # cores per cv
+
+if(file.exists("fitStanLmerFpca1.Rdata")){
+    load("fitStanLmerFpca1.Rdata")
+} else{
+    fitStanLmerFpca1 = stan_glmer(f0 ~ cog_load + current + syllable1 + syllable2 + syllable1:syllable2 +
+                                  PC1 + PC2 + PC3 + PC4 +
+                                  PC1:syllable1 + PC1:syllable2 +
+                                  PC2:syllable1 + PC2:syllable2 +
+                                  PC3:syllable1 + PC3:syllable2 +
+                                  PC4:syllable1 + PC4:syllable2 +
+                                  (1 | subject) +
+                                  (0 + current|subject) +
+                                  (0 + PC1 + PC2 + PC3 + PC4|subject)
+                              ,
+                              data = mandarino_fpca,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 1,
+                              iter = 10000,
+                              #chains = cores, cores = cores,
+                              QR = TRUE)
+
+    save(fitStanLmerFpca1, file="fitStanLmerFpca1.Rdata")
+}
+```
+
+```{r fit_fullfissi}
+if(file.exists("fitStanLmerFpca4.Rdata")){
+    load("fitStanLmerFpca4.Rdata")
+} else{
+    fitStanLmerFpca4 = stan_glmer(f0 ~ current + cog_load +
+                                  syllable1 + syllable2 + syllable1:syllable2 +
+                                  PC1 + PC2 + PC3 + PC4 +
+                                  PC1:syllable1 + PC1:syllable2 +
+                                  PC2:syllable1 + PC2:syllable2 +
+                                  PC3:syllable1 + PC3:syllable2 +
+                                  PC4:syllable1 + PC4:syllable2 +
+                                  (1 | subject) +
+                                  (0 + current|subject) +
+                                  (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                                  (0 + PC1:syllable1 | subject) +
+                                  (0 + PC1:syllable2 | subject) +
+                                  (0 + PC2:syllable1 | subject) +
+                                  (0 + PC2:syllable2 | subject) +
+                                  (0 + PC3:syllable1 | subject) +
+                                  (0 + PC3:syllable2 | subject) +
+                                  (0 + PC4:syllable1 | subject) +
+                                  (0 + PC4:syllable2 | subject) 
+                              ,
+                              data = mandarino_fpca,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 1,
+                              iter = 10000,
+                              QR = TRUE)
+    save(fitStanLmerFpca4, file="fitStanLmerFpca4.Rdata")
+}
+```
+
+```{r fit_fullfissi2}
+if(file.exists("fitStanLmerFpca5.Rdata")){
+    load("fitStanLmerFpca5.Rdata")
+} else{
+    fitStanLmerFpca5 = stan_glmer(f0 ~ current + cog_load +
+                                  syllable1 + syllable2 + syllable1:syllable2 +
+                                  PC1 + PC2 + PC3 + PC4 +
+                                  PC1:syllable1 + PC1:syllable2 +
+                                  PC2:syllable1 + PC2:syllable2 +
+                                  PC3:syllable1 + PC3:syllable2 +
+                                  PC4:syllable1 + PC4:syllable2 +
+                                  (1 | subject) +
+                                  (0 + current|subject) +
+                                  (0 + syllable1 + syllable2 + syllable1:syllable2 | subject) +
+                                  (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                                  (0 + PC1:syllable1 | subject) +
+                                  (0 + PC1:syllable2 | subject) +
+                                  (0 + PC2:syllable1 | subject) +
+                                  (0 + PC2:syllable2 | subject) +
+                                  (0 + PC3:syllable1 | subject) +
+                                  (0 + PC3:syllable2 | subject) +
+                                  (0 + PC4:syllable1 | subject) +
+                                  (0 + PC4:syllable2 | subject) 
+                              ,
+                              data = mandarino_fpca,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 1,
+                              prior_covariance = decov(regularization = 2),
+                              iter = 10000,
+                              QR = TRUE)
+    save(fitStanLmerFpca5, file="fitStanLmerFpca5.Rdata")
+}
+```
+
+```{r fit_fullfissi3}
+if(file.exists("fitStanLmerFpca6.Rdata")){
+    load("fitStanLmerFpca6.Rdata")
+} else{
+    fitStanLmerFpca6 = stan_glmer(f0 ~ current + cog_load +
+                                  syllable1 + syllable2 + syllable1:syllable2 +
+                                  PC1 + PC2 + PC3 + PC4 +
+                                  PC1:syllable1 + PC1:syllable2 +
+                                  PC2:syllable1 + PC2:syllable2 +
+                                  PC3:syllable1 + PC3:syllable2 +
+                                  PC4:syllable1 + PC4:syllable2 +
+                                  PC1:syllable1:syllable2 +
+                                  PC2:syllable1:syllable2 +
+                                  PC3:syllable1:syllable2 +
+                                  PC4:syllable1:syllable2 +
+                                  (1 | subject) +
+                                  (0 + current|subject) +
+                                  (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                                  (0 + PC1:syllable1 | subject) +
+                                  (0 + PC1:syllable2 | subject) +
+                                  (0 + PC2:syllable1 | subject) +
+                                  (0 + PC2:syllable2 | subject) +
+                                  (0 + PC3:syllable1 | subject) +
+                                  (0 + PC3:syllable2 | subject) +
+                                  (0 + PC4:syllable1 | subject) +
+                                  (0 + PC4:syllable2 | subject) 
+                              ,
+                              data = mandarino_fpca,
+                              algorithm = "meanfield", tol_rel_obj = 0.0001, elbo_samples = 100, grad_samples = 1,
+                              iter = 10000,
+                              QR = TRUE)
+    save(fitStanLmerFpca6, file="fitStanLmerFpca6.Rdata")
+}
+```
+```{r fit_nocog_load}
+if(file.exists("fitStanLmerFpca2.Rdata")){
+    load("fitStanLmerFpca2.Rdata")
+} else{
+    fitStanLmerFpca2 = stan_glmer(f0 ~ current +
+                              PC1 + PC2 + PC3 + PC4 +
+                              PC1:syllable1 + PC1:syllable2 +
+                              PC2:syllable1 + PC2:syllable2 +
+                              PC3:syllable1 + PC3:syllable2 +
+                              PC4:syllable1 + PC4:syllable2 +
+                              (1 | subject) +
+                              (0 + current|subject) +
+                              (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                              (0 + PC1:syllable1 | subject) +
+                              (0 + PC1:syllable2 | subject) +
+                              (0 + PC2:syllable1 | subject) +
+                              (0 + PC2:syllable2 | subject) +
+                              (0 + PC3:syllable1 | subject) +
+                              (0 + PC3:syllable2 | subject) +
+                              (0 + PC4:syllable1 | subject) +
+                              (0 + PC4:syllable2 | subject) 
+                              ,
+                         data = mandarino_fpca,
+                    algorithm = "meanfield",
+                    iter = 10000,
+                    QR = TRUE)
+    save(fitStanLmerFpca2, file="fitStanLmerFpca2.Rdata")
+}
+```
+
+```{r fit_no_current}
+if(file.exists("fitStanLmerFpca3.Rdata")){
+    load("fitStanLmerFpca3.Rdata")
+} else{
+    fitStanLmerFpca3 = stan_glmer(f0 ~ PC1 + PC2 + PC3 + PC4 +
+                                  PC1:current + PC2:current + PC3:current + PC4:current+
+                              PC1:syllable1 + PC1:syllable2 +
+                              PC2:syllable1 + PC2:syllable2 +
+                              PC3:syllable1 + PC3:syllable2 +
+                              PC4:syllable1 + PC4:syllable2 +
+                              (1 | subject) +
+                              (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                              (0 + PC1:syllable1 | subject) +
+                              (0 + PC1:syllable2 | subject) +
+                              (0 + PC2:syllable1 | subject) +
+                              (0 + PC2:syllable2 | subject) +
+                              (0 + PC3:syllable1 | subject) +
+                              (0 + PC3:syllable2 | subject) +
+                              (0 + PC4:syllable1 | subject) +
+                              (0 + PC4:syllable2 | subject) 
+                              ,
+                         data = mandarino_fpca,
+                    algorithm = "meanfield",
+                    prior_covariance = decov(regularization = 2),
+                    iter = 10000,
+                    QR = TRUE)
+    save(fitStanLmerFpca3, file="fitStanLmerFpca3.Rdata")
+}
+```
+
+Confronto:
+
+```{r kf_all}
+{
+    print("--------- kf ---------")
+    if(file.exists("kf.Rdata")){
+        load("kf.Rdata")
+    } else{
+        kf = cv_stanvb(fitStanLmerFpca, K = K, cores = kfcores)
+        kf = lapply(kf, mean)
+        save(kf, file = "kf.Rdata")
+    }
+    # kf = kf[-9]             # algoritmo 9 non è andato a convergenza
+    print(cbind("mean" = mean(unlist(kf)), "sd" = sd(unlist(kf))))
+
+    print("--------- kf1 ---------")
+    if(file.exists("kf1.Rdata")){
+        load("kf1.Rdata")
+    } else{
+        kf1 = cv_stanvb(fitStanLmerFpca1, K = K, cores = kfcores)
+        kf1 = lapply(kf1, mean)
+        save(kf1, file = "kf1.Rdata")
+    }
+    print(cbind("mean" = mean(unlist(kf1)), "sd" = sd(unlist(kf1))))
+
+    print("--------- kf2 ---------")
+    if(file.exists("kf2.Rdata")){
+        load("kf2.Rdata")
+    } else{
+        kf2 = cv_stanvb(fitStanLmerFpca2, K = K, cores = kfcores)
+        kf2 = lapply(kf2, mean)
+        save(kf2, file = "kf2.Rdata")
+    }
+
+    print(cbind("mean" = mean(unlist(kf2)), "sd" = sd(unlist(kf2))))
+
+    print("--------- kf3 ---------")
+    if(file.exists("kf3.Rdata")){
+        load("kf3.Rdata")
+    } else{
+        kf3 = cv_stanvb(fitStanLmerFpca3, K = K, cores = kfcores)
+        kf3 = lapply(kf3, mean)
+        save(kf3, file = "kf3.Rdata")
+    }
+    print(cbind("mean" = mean(unlist(kf3)), "sd" = sd(unlist(kf3))))
+
+    print("--------- kf4 ---------")
+    if(file.exists("kf4.Rdata")){
+        load("kf4.Rdata")
+    } else{
+        kf4 = cv_stanvb(fitStanLmerFpca4, K = K, cores = kfcores)
+        kf4 = lapply(kf4, mean)
+        save(kf4, file = "kf4.Rdata")
+    }
+    print(cbind("mean" = mean(unlist(kf4)), "sd" = sd(unlist(kf4))))
+
+    print("--------- kf5 ---------")
+    if(file.exists("kf5.Rdata")){
+        load("kf5.Rdata")
+    } else{
+        kf5 = cv_stanvb(fitStanLmerFpca5, K = K, cores = kfcores)
+        kf5 = lapply(kf5, mean)
+        save(kf5, file = "kf5.Rdata")
+    }
+    print(cbind("mean" = mean(unlist(kf5)), "sd" = sd(unlist(kf5))))
+    
+    # print("--------- kf6 ---------")
+    # if(file.exists("kf6.Rdata")){
+    #     load("kf6.Rdata")
+    # } else{
+    #     kf6 = cv_stanvb(fitStanLmerFpca6, K = K, cores = kfcores)
+    #     save(kf6, file = "kf6.Rdata")
+    # }
+    # print(cbind("mean" = mean(unlist(kf6)), "sd" = sd(unlist(kf6))))
+}
+```
+```{r kfold_comparison}
+rbind(cbind(mean(unlist(kf5)), sd(unlist(kf5))/sqrt(10)),
+      cbind(mean(unlist(kf4)), sd(unlist(kf4))/sqrt(10)),
+      cbind(mean(unlist(kf)), sd(unlist(kf))/sqrt(10)),
+      cbind(mean(unlist(kf2)), sd(unlist(kf2))/sqrt(10)),
+      cbind(mean(unlist(kf3)), sd(unlist(kf3))/sqrt(10)),
+      cbind(mean(unlist(kf1)), sd(unlist(kf1))/sqrt(10))
+      ) %>%
+    set_rownames(c("Eff. misti syllable e PCA:syllable, fissi syllable PCA:syllable",
+                   "Eff. misti PCA:syllable, fissi syllable PCA:syllable",
+                   "Eff. misti PCA:syllable, fissi no syllable",
+                   "Eff. misti PCA:syllable, fissi no syllable no cog_load",
+                   "Eff. misti PCA:syllable, fissi no syllable no cog_load no current",
+                   "No eff. misti PCA:syllable, fissi syllable PCA:syllable"
+                   )) %>%
+    set_colnames(c("mse", "sd")) -> fpcaKf
+
+fpcaKf
+
+kbl(fpcaKf, booktabs = TRUE, format = "latex") %>%
+    kable_styling(latex_options = "HOLD_position")
+```
+
+Modello scelto:
+
+```{r stan_chosen_pred}
+ypredStanLmerFpca3 = posterior_predict(fitStanLmerFpca3, draws = 500)
+ypred = apply(ypredStanLmerFpca3, 2, mean)
+lmin = apply(ypredStanLmerFpca3, 2, function(col) quantile(col, p = 0.05))
+lmax = apply(ypredStanLmerFpca3, 2, function(col) quantile(col, p = 0.95))
+
+ppc_subject("S1", mandarino, ypred, lmin, lmax)
+ppc_subject("S2", mandarino, ypred, lmin, lmax)
+ppc_subject("S3", mandarino, ypred, lmin, lmax)
+ppc_subject("S4", mandarino, ypred, lmin, lmax)
+ppc_subject("S5", mandarino, ypred, lmin, lmax)
+ppc_subject("S6", mandarino, ypred, lmin, lmax)
+ppc_subject("S7", mandarino, ypred, lmin, lmax)
+ppc_subject("S8", mandarino, ypred, lmin, lmax)
+ppc_subject("S9", mandarino, ypred, lmin, lmax)
+ppc_subject("S10", mandarino, ypred, lmin, lmax)
+ppc_subject("S11", mandarino, ypred, lmin, lmax)
+ppc_subject("S12", mandarino, ypred, lmin, lmax)
+
+ppc_full(mandarino, ypred)
+```
+
+Stima del modello scelto con HMC:
+
+```{r fit_final}
+if(file.exists("fitStanFpcaFinal.Rdata")){
+    load("fitStanFpcaFinal.Rdata")
+} else{
+    fitStanFpcaFinal = stan_glmer(f0 ~ current + cog_load +
+                              PC1 + PC2 + PC3 + PC4 +
+                              PC1:syllable1 + PC1:syllable2 +
+                              PC2:syllable1 + PC2:syllable2 +
+                              PC3:syllable1 + PC3:syllable2 +
+                              PC4:syllable1 + PC4:syllable2 +
+                              (1 | subject) +
+                              (0 + PC1 + PC2 + PC3 + PC4|subject) +
+                              (0 + PC1:syllable1 | subject) +
+                              (0 + PC1:syllable2 | subject) +
+                              (0 + PC2:syllable1 | subject) +
+                              (0 + PC2:syllable2 | subject) +
+                              (0 + PC3:syllable1 | subject) +
+                              (0 + PC3:syllable2 | subject) +
+                              (0 + PC4:syllable1 | subject) +
+                              (0 + PC4:syllable2 | subject) 
+                              ,
+                              data = mandarino_fpca,
+                              prior_covariance = decov(regularization = 2),
+                              cores = 4,
+                              chains = 4,
+                              control = list(max_treedepth = 10),
+                              adapt_delta = 0.825,
+                              QR = TRUE)
+    save(fitStanFpcaFinal, file="fitStanFpcaFinal.Rdata")
+}
+plot(fitStanFpcaFinal, plotfun = "dens_overlay", pars=names(fitStanFpcaFinal$coefficients)[1:33])
+```
+
+```{r stan_chosen_pred}
+ypredStanFpca = posterior_predict(fitStanFpcaFinal, draws = 500)
+ypred = apply(ypredStanFpca, 2, mean)
+lmin = apply(ypredStanFpca, 2, function(col) quantile(col, p = 0.05))
+lmax = apply(ypredStanFpca, 2, function(col) quantile(col, p = 0.95))
+
+ppc_subject("S1", mandarino, ypred, lmin, lmax)
+ppc_subject("S2", mandarino, ypred, lmin, lmax)
+ppc_subject("S3", mandarino, ypred, lmin, lmax)
+ppc_subject("S4", mandarino, ypred, lmin, lmax)
+ppc_subject("S5", mandarino, ypred, lmin, lmax)
+ppc_subject("S6", mandarino, ypred, lmin, lmax)
+ppc_subject("S7", mandarino, ypred, lmin, lmax)
+ppc_subject("S8", mandarino, ypred, lmin, lmax)
+ppc_subject("S9", mandarino, ypred, lmin, lmax)
+ppc_subject("S10", mandarino, ypred, lmin, lmax)
+ppc_subject("S11", mandarino, ypred, lmin, lmax)
+ppc_subject("S12", mandarino, ypred, lmin, lmax)
+
+ppc_full(mandarino, ypred)
+```
+
+
+# Confronto tra modelli #
+
+Funzione per CV togliendo un soggetto alla volta:
+
+```{r kf_subject}
+cv_stanvb_subj = function(stanfit, K = 12, cores = min(K, 12)){
+  require("foreach")
+  require("parallel")
+  require("doParallel")
+  
+  cv_stanvb_fit = function(i, f, data, ...){
+    require("rstanarm")
+    Y_train = data$y_train
+    Y_test = data$y_test
+    cat("Fit modello ", i)
+    fit = stan_glmer(as.formula(f),
+                     data = Y_train,
+                     algorithm = "meanfield",
+                     tol_rel_obj = 0.0001,
+                     elbo_samples = 100,
+                     grad_samples = 1,
+                     iter = 10000,
+                     QR = TRUE)
+    cat("Fit modello ", i, " completato\n\n")
+    
+    cat("Calcolo errore", i, "...\n")
+    oss = Y_test[ , 7]
+    pred = posterior_predict(fit, newdata=Y_test, draws = 50)
+    return(pred)
+  }
+  
+  cl = parallel::makeCluster(cores, outfile="")
+  registerDoParallel(cl)
+  out = vector(mode = "list", length = K)
+  dati = stanfit$data
+  rownames(dati) = 1:NROW(dati)
+  f = stanfit$formula
+
+  data_list = vector(mode = "list", length = K)
+  subj = mixedsort(levels(dati$subject)) 
+  for(i in 1:K){
+    data_list[[i]]$y_train = dati[dati$subject != subj[i], ]
+    data_list[[i]]$y_test = dati[dati$subject == subj[i], ]
+  }
+  
+  err_list = foreach(i = 1:K, .inorder = FALSE) %dopar% {
+    cv_stanvb_fit(i, f, data_list[[i]])
+  }
+  parallel::stopCluster(cl)
+  return(err_list)
+}
+```
+
+```{r mandarino_squared}
+mandarino_fpca$peak = ifelse(mandarino_fpca$time >= 7 & mandarino_fpca$time <= 13, 1, 0)
+mandarino_fpca = cbind(mandarino_fpca, time2 = mandarino_fpca$time^2)
+mandarino_fpca %>% head
+load("fitBaseBest.Rdata")
+save.image("comparison.Rdata")
+```
+
+```{r save_img}
+{
+    # Salvo i valori previsti in attesa di confrontarli dopo con una
+    # funzione di confronto opportuna
+    print("--------- kf finale fpca ---------")
+    if(file.exists("predFpca.Rdata")){
+        load("predFpca.Rdata")
+    } else{
+        predFpca = cv_stanvb_subj(fitStanLmerFpca4)
+        save(predFpca, file = "predFpca.Rdata")
+    }
+    
+    print("--------- kf finale base ---------")
+    if(file.exists("predBase.Rdata")){
+        load("predBase.Rdata")
+    } else{
+        predBase = cv_stanvb_subj(fitStanLmer10)
+        save(predBase, file = "predBase.Rdata")
+    }
+}
+```
+
+
+Funzione per il calcolo dell'errore:
+
+```{r error_func}
+error_func <- function(yorig, ypred){
+  ## Funzione che calcola la bonta' del modello in termini di concordanza nelle derivate
+  
+  # yorig vettore di valori della funzione f0
+  # ypred vettore di valori previsti dal modello nello stesso ordine di yorig
+  # require(features)
+  require(pracma)
+  
+  yorig <- matrix(yorig, ncol = 20, byrow = T)
+  ypred <- matrix(ypred, ncol = 20, byrow = T)
+  
+ # calcolo le derivate sui valori originali  
+ deriv_orig <- t(apply(yorig,
+                    1,
+                    function(row) pracma::gradient(row)))
+ # calcolo le derivete sui valori predetti
+ deriv_pred <- t(apply(ypred,
+                    1,
+                    function(row) pracma::gradient(row)))
+ 
+ # calcolo dell'errore
+ MSE <- mean((deriv_orig - deriv_pred)^2)
+ print(MSE)
+ denum <- mean(sign(deriv_orig) == sign(deriv_pred))
+ print(denum)
+ return(MSE/denum)
+}
+```
+
+Confronto finale tra i due modelli:
+
+```{r }
+errFpca = rep(0,length(predFpca))
+for(subj in 1:length(predFpca)){
+    ytrue = mandarino_fpca$f0[mandarino_fpca$subject == paste0("S", subj)] 
+    for(j in 1:NROW(predFpca[[subj]])){
+        ypred = predFpca[[subj]][j, ]
+        errFpca[subj] = errFpca[subj] + error_func(ytrue, ypred)
+    }
+}
+errFpca = errFpca / 50
+errFpca
+
+errBase = rep(0,length(predBase))
+for(subj in 1:length(predBase)){
+    ytrue = mandarino_fpca$f0[mandarino_fpca$subject == paste0("S", subj)] 
+    for(j in 1:NROW(predBase[[subj]])){
+        ypred = predBase[[subj]][j, ]
+        errBase[subj] = errBase[subj] + error_func(ytrue, ypred)
+    }
+}
+errBase = errBase / 50
+errBase
+
+tabFinal = rbind(
+                 "fPCA" = c(mean(errFpca), sd(errFpca)/sqrt(length(errFpca))),
+                 "Peak" = c(mean(errBase), sd(errBase)/sqrt(length(errBase)))
+) %>% 
+    set_colnames(c("mean", "sd"))
+
+tabFinal %>% 
+    kbl(booktabs = TRUE, format = "latex",
+        caption = "Convalida incrociata tra i due modelli migliori basati sulle fPCA e sulla modellazione del picco, stimati nelle sezioni precendenti.",
+        label = "finalCV") %>% 
+    kable_styling(latex_options = "HOLD_position")
+
+```
+
+
+
+# Conclusioni (interpretazione del modello) #
+
+```{r model}
+print(fitStanFpcaFinal)
+posterior = as.data.frame(fitStanFpcaFinal)
+```
+
+Diagnostiche di convergenza del modello finale:
+
+```{r convergence_diag}
+library(rstan)
+pars = names(fitStanFpcaFinal$coefficients[1:33])
+mcmc_rhat(rhat(fitStanFpcaFinal))
+mcmc_rhat(rhat(fitStanFpcaFinal, pars = pars))
+ggsave("rhat.png", device = png(), width = 11, height = 8, dpi = 700)
+
+mcmc_acf(posterior, pars=pars)
+```
+
+
+## Carico cognitivo ##
+
+```{r cog_load}
+png("cog_load.png", 2000, 1200, res = 150)
+plot(fitStanFpcaFinal, plotfun = "dens", pars = "cog_loadCL6")
+dev.off()
+```
+
+
+## Effetti di anticipazione, trascinamento e mediazione ##
+
+Funzioni per ottenere grafici delle distribuzioni predittive a posteriori:
+
+```{r func}
+get_posterior = function(posterior, fpc, syllable1, syllable2, fixed = "none", subject = NULL){
+    # TODO: Docstring for get_posterior.
+	#
+    # @param posterior TODO
+    # @param syllable1 TODO
+    # @param syllable2 TODO
+    # @param fixed TODO
+    # @param subject TODO
+	#
+    # @return TODO
+
+    # ---------- Estraggo coefficienti relativi a tutte le variabili che interessano --------- #
+    cols = colnames(posterior)
+    base = c("(Intercept)")
+    PC1 = c("PC1", paste0("PC1:", "syllable", 1:2, c(syllable1, syllable2)))
+    PC1 = PC1[PC1 %in% cols]
+    PC2 = c("PC2", paste0("PC2:", "syllable", 1:2, c(syllable1, syllable2)))
+    PC2 = PC2[PC2 %in% cols]
+    PC3 = c("PC3", paste0("PC3:", "syllable", 1:2, c(syllable1, syllable2)))
+    PC3 = PC3[PC3 %in% cols]
+    PC4 = c("PC4", paste0("PC4:", "syllable", 1:2, c(syllable1, syllable2)))
+    PC4 = PC4[PC4 %in% cols]
+    
+    if(fixed == "first"){
+        # ---------- Calcolo posteriori delle curve baseline, che contiene fPC1 e tutte le var che non sono modificate dalle sillabe --------- #
+        ref_PC1 = c("PC1", paste0("PC1:", "syllable1", syllable1))
+        ref_PC1 = ref_PC1[ref_PC1 %in% cols]
+        ref_PC2 = c("PC2", paste0("PC2:", "syllable1", syllable1))
+        ref_PC2 = ref_PC2[ref_PC2 %in% cols]
+        ref_PC3 = c("PC3", paste0("PC3:", "syllable1", syllable1))
+        ref_PC3 = ref_PC3[ref_PC3 %in% cols]
+        ref_PC4 = c("PC4", paste0("PC4:", "syllable1", syllable1))
+        ref_PC4 = ref_PC4[ref_PC4 %in% cols]
+        
+        ref_PC1_beta = posterior[ , ref_PC1, drop=FALSE]
+        ref_PC2_beta = posterior[ , ref_PC2, drop=FALSE]
+        ref_PC3_beta = posterior[ , ref_PC3, drop=FALSE]
+        ref_PC4_beta = posterior[ , ref_PC4, drop=FALSE]
+
+        eigenf = fpca$phi
+        
+        PC1_ref = matrix(0, nrow = NROW(ref_PC1_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC1_beta)){
+            PC1_ref = PC1_ref +
+                ref_PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+        }
+        PC2_ref = matrix(0, nrow = NROW(ref_PC2_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC2_beta)){
+            PC2_ref = PC2_ref +
+                ref_PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
+        }
+
+        PC3_ref = matrix(0, nrow = NROW(ref_PC3_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC3_beta)){
+            PC3_ref = PC3_ref +
+                ref_PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+        }
+        PC4_ref = matrix(0, nrow = NROW(ref_PC4_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC4_beta)){
+            PC4_ref = PC4_ref +
+                ref_PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
+        }
+
+        ref_int = matrix(posterior[ , base], nrow = NROW(PC1_ref), ncol = NCOL(PC1_ref))
+        PC_ref = ref_int + PC1_ref + PC2_ref + PC3_ref + PC4_ref
+
+        # ---------- Calcolo scostamento delle fPC 2-4 dovuto al variare delle sillabe --------- #
+        cols = colnames(posterior)
+        PC1 = c(paste0("PC1:", "syllable", 2, syllable2))
+        PC1 = PC1[PC1 %in% cols]
+        PC2 = c(paste0("PC2:", "syllable", 2, syllable2))
+        PC2 = PC2[PC2 %in% cols]
+        PC3 = c(paste0("PC3:", "syllable", 2, syllable2))
+        PC3 = PC3[PC3 %in% cols]
+        PC4 = c(paste0("PC4:", "syllable", 2, syllable2))
+        PC4 = PC4[PC4 %in% cols]
+
+        PC1_beta = posterior[ , PC1, drop=FALSE]
+        PC2_beta = posterior[ , PC2, drop=FALSE]
+        PC3_beta = posterior[ , PC3, drop=FALSE]
+        PC4_beta = posterior[ , PC4, drop=FALSE]
+
+        PC1_syll = matrix(0, nrow = NROW(PC1_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC1_beta)){
+            PC1_syll = PC1_syll +
+                PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+        }
+        PC2_syll = matrix(0, nrow = NROW(PC2_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC2_beta)){
+            PC2_syll = PC2_syll +
+                PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
+        }
+
+        PC3_syll = matrix(0, nrow = NROW(PC3_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC3_beta)){
+            PC3_syll = PC3_syll +
+                PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+        }
+        PC4_syll = matrix(0, nrow = NROW(PC4_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC4_beta)){
+            PC4_syll = PC4_syll +
+                PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
+        }
+        PC_syll = PC1_syll + PC2_syll + PC3_syll + PC4_syll
+        baseline = paste0(syllable1, ":T1")
+    }
+    
+    if(fixed == "second"){
+        # ---------- Calcolo posteriori delle curve baseline, che contiene fPC1 e tutte le var che non sono modificate dalle sillabe --------- #
+        ref_PC1 = c("PC1", paste0("PC1:", "syllable2", syllable2))
+        ref_PC1 = ref_PC1[ref_PC1 %in% cols]
+        ref_PC2 = c("PC2", paste0("PC2:", "syllable2", syllable2))
+        ref_PC2 = ref_PC2[ref_PC2 %in% cols]
+        ref_PC3 = c("PC3", paste0("PC3:", "syllable2", syllable2))
+        ref_PC3 = ref_PC3[ref_PC3 %in% cols]
+        ref_PC4 = c("PC4", paste0("PC4:", "syllable2", syllable2))
+        ref_PC4 = ref_PC4[ref_PC4 %in% cols]
+        
+        ref_PC1_beta = posterior[ , ref_PC1, drop=FALSE]
+        ref_PC2_beta = posterior[ , ref_PC2, drop=FALSE]
+        ref_PC3_beta = posterior[ , ref_PC3, drop=FALSE]
+        ref_PC4_beta = posterior[ , ref_PC4, drop=FALSE]
+
+        eigenf = fpca$phi
+        
+        PC1_ref = matrix(0, nrow = NROW(ref_PC1_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC1_beta)){
+            PC1_ref = PC1_ref +
+                ref_PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+        }
+        PC2_ref = matrix(0, nrow = NROW(ref_PC2_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC2_beta)){
+            PC2_ref = PC2_ref +
+                ref_PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
+        }
+
+        PC3_ref = matrix(0, nrow = NROW(ref_PC3_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC3_beta)){
+            PC3_ref = PC3_ref +
+                ref_PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+        }
+        PC4_ref = matrix(0, nrow = NROW(ref_PC4_beta), ncol = NROW(eigenf))
+        for(cl in colnames(ref_PC4_beta)){
+            PC4_ref = PC4_ref +
+                ref_PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
+        }
+
+        ref_int = matrix(posterior[ , base], nrow = NROW(PC1_ref), ncol = NCOL(PC1_ref))
+        PC_ref = ref_int + PC1_ref + PC2_ref + PC3_ref + PC4_ref
+
+        # ---------- Calcolo scostamento delle fPC 2-4 dovuto al variare delle sillabe --------- #
+        cols = colnames(posterior)
+        PC1 = c(paste0("PC1:", "syllable", 1, syllable1))
+        PC1 = PC1[PC1 %in% cols]
+        PC2 = c(paste0("PC2:", "syllable", 1, syllable1))
+        PC2 = PC2[PC2 %in% cols]
+        PC3 = c(paste0("PC3:", "syllable", 1, syllable1))
+        PC3 = PC3[PC3 %in% cols]
+        PC4 = c(paste0("PC4:", "syllable", 1, syllable1))
+        PC4 = PC4[PC4 %in% cols]
+
+        PC1_beta = posterior[ , PC1, drop=FALSE]
+        PC2_beta = posterior[ , PC2, drop=FALSE]
+        PC3_beta = posterior[ , PC3, drop=FALSE]
+        PC4_beta = posterior[ , PC4, drop=FALSE]
+
+        PC1_syll = matrix(0, nrow = NROW(PC1_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC1_beta)){
+            PC1_syll = PC1_syll +
+                PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+        }
+        PC2_syll = matrix(0, nrow = NROW(PC2_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC2_beta)){
+            PC2_syll = PC2_syll +
+                PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
+        }
+
+        PC3_syll = matrix(0, nrow = NROW(PC3_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC3_beta)){
+            PC3_syll = PC3_syll +
+                PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+        }
+        PC4_syll = matrix(0, nrow = NROW(PC4_beta), ncol = NROW(eigenf))
+        for(cl in colnames(PC4_beta)){
+            PC4_syll = PC4_syll +
+                PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
+        }
+        PC_syll = PC1_syll + PC2_syll + PC3_syll + PC4_syll
+        baseline = paste0("T1:", syllable2)
+    }
+
+    # else if(fixed == "none"){
+    #     # ---------- Calcolo posteriori delle curve baseline, che contiene fPC1 e tutte le var che non sono modificate dalle sillabe --------- #
+    #     base_post = posterior[ , base ]             # Intercetta
+    #     PC1_beta = posterior[ , PC1, drop=FALSE]
+    #     PC2_beta = posterior[ , PC2, drop=FALSE]
+    #     PC3_beta = posterior[ , PC3, drop=FALSE]
+    #     PC4_beta = posterior[ , PC4, drop=FALSE]
+    #     eigenf = fpca$phi
+
+    #     PC1_base = PC1_beta$PC1 %*% t(eigenf[ , 1 ]) 
+    #     PC2_base = PC2_beta$PC2 %*% t(eigenf[ , 2 ]) 
+    #     PC3_base = PC3_beta$PC3 %*% t(eigenf[ , 3 ]) 
+    #     PC4_base = PC4_beta$PC4 %*% t(eigenf[ , 4 ]) 
+
+    #     PC1_syll = matrix(0, nrow = NROW(PC1_base), ncol = NCOL(PC1_base))
+    #     for(cl in colnames(PC1_beta)[-1]){
+    #         PC1_syll = PC1_syll + PC1_beta[ , cl ] %*% t(eigenf[ , 1 ])
+    #     }
+
+    #     PC_base = matrix(base_post, nrow = NROW(PC1_base), ncol = NCOL(PC1_base)) +
+    #         PC1_base + PC2_base + PC3_base + PC4_base + PC1_syll
+
+    #     # ---------- Calcolo scostamento delle fPC 2-4 dovuto al variare delle sillabe --------- #
+
+    #     if(NCOL(current1_post) == 0){
+    #         current1_post = 0
+    #     }
+    #     current2_post = posterior[ , current2 ]
+    #     if(NCOL(current2_post) == 0){
+    #         current2_post = 0
+    #     }
+
+    #     PC2_syll = matrix(0, nrow = NROW(PC2_base), ncol = NCOL(PC2_base))
+    #     for(cl in colnames(PC2_beta)[-1]){
+    #         PC2_syll = PC2_syll + PC2_beta[ , cl ] %*% t(eigenf[ , 2 ])
+    #     }
+    #     PC3_syll = matrix(0, nrow = NROW(PC3_base), ncol = NCOL(PC3_base))
+    #     for(cl in colnames(PC3_beta)[-1]){
+    #         PC3_syll = PC3_syll + PC3_beta[ , cl ] %*% t(eigenf[ , 3 ])
+    #     }
+    #     PC4_syll = matrix(0, nrow = NROW(PC4_base), ncol = NCOL(PC4_base))
+    #     for(cl in colnames(PC4_beta)[-1]){
+    #         PC4_syll = PC4_syll + PC4_beta[ , cl ] %*% t(eigenf[ , 4 ])
+    #     }
+
+    #     PC_syll =  PC2_syll + PC3_syll + PC4_syll + 
+    #         cbind(matrix(current1_post, nrow = NROW(PC1_syll), ncol = 10), matrix(0, nrow = NROW(PC1_syll), ncol = 10)) + 
+    #         cbind(matrix(0, nrow = NROW(PC1_syll), ncol = 10), matrix(current2_post, nrow = NROW(PC1_syll), ncol = 10)) 
+
+    #     baseline = "T1:T1"
+    # }
+
+    return(list("baseline" = PC_ref, "scostamento" = PC_syll,
+                "syllable1" = syllable1, "syllable2" = syllable2, "ref" = baseline))
+}
+
+plot_posterior = function(post_fpca, ndraws = 4000, fixed = "first"){
+    # TODO: Docstring for plot_posterior.
+	#
+    # @param post_fpca TODO
+	#
+    # @return TODO
+    require(ggpubr)
+
+    idx = sample(1:NROW(post_fpca$baseline), ndraws)
+    baseline = post_fpca$baseline[idx, ]
+    scostamento = post_fpca$scostamento[idx, ]
+
+    if (fixed == "first"){
+        time = 1:10
+        titolo = paste0("Anticipazione dovuta a ", post_fpca$syllable2)
+    } else {
+        time = 11:20
+        titolo = paste0("Trascinamento dovuto a ", post_fpca$syllable1)
+    }
+
+    baseline_plot = t(baseline)[time, ]
+    meanf = rowMeans(baseline_plot)
+    qtl = apply(baseline_plot, 1, quantile, p=c(0.025, 0.975))
+    df1 = data.frame(cbind(time, meanf, t(qtl)))
+    colnames(df1) = c("time", "mean", "lcl", "ucl")
+
+    # Plot baseline
+    plot1 <-
+        ggplot(df1, aes(x = time))+
+        geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+        geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+        ggtitle("Frequenza baseline") +
+        theme(plot.title = element_text(hjust = 0.5))
+
+    scostamento_plot = t(scostamento)[time, ]
+    meanf = rowMeans(scostamento_plot)
+    qtl = apply(scostamento_plot, 1, quantile, p=c(0.025, 0.975))
+    df2 = data.frame(cbind(time, meanf, t(qtl)))
+    colnames(df2) = c("time", "mean", "lcl", "ucl")
+
+    
+    # Plot scostamento
+    plot2 <-
+        ggplot(df2, aes(x = time))+
+        geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+        geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+        ggtitle(titolo) +
+        theme(plot.title = element_text(hjust = 0.5))
+        
+
+    ggarrange(plot1, plot2, ncol = 1, nrow = 2)
+    return(list("baseline" = plot1, "scostamento" = plot2))
+}
+```
+
+Grafici per anticipazione:
+
+```{r grafici_posteriori}
+post_fpca = get_posterior(posterior, fpca, "T1", "T1", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T1", "T2", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T1", "T3", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T1", "T4", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+
+post_fpca = get_posterior(posterior, fpca, "T2", "T1", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T2", "T2", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T2", "T3", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T2", "T4", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+
+post_fpca = get_posterior(posterior, fpca, "T3", "T1", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T3", "T2", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T3", "T3", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T3", "T4", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+
+post_fpca = get_posterior(posterior, fpca, "T4", "T1", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T4", "T2", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T4", "T3", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+post_fpca = get_posterior(posterior, fpca, "T4", "T4", fixed = "first")
+plot_posterior(post_fpca, fixed = "first")
+```
+
+Grafici per trascinamento:
+
+```{r grafici_posteriori2}
+post_fpca = get_posterior(posterior, fpca, "T1", "T1", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T2", "T1", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T3", "T1", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T4", "T1", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+
+post_fpca = get_posterior(posterior, fpca, "T1", "T2", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T2", "T2", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T3", "T2", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T4", "T2", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+
+post_fpca = get_posterior(posterior, fpca, "T1", "T3", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T2", "T3", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T3", "T3", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T4", "T3", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+
+post_fpca = get_posterior(posterior, fpca, "T1", "T4", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T2", "T4", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T3", "T4", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+post_fpca = get_posterior(posterior, fpca, "T4", "T4", fixed = "second")
+plot_posterior(post_fpca, fixed = "second")
+```
+
+Grafici per mediazione:
+
+```{r mediazione}
+baseline1 <- get_posterior(posterior, fpca, "T1", "T1", fixed = "first")$baseline
+baseline2 <- get_posterior(posterior, fpca, "T1", "T1", fixed = "second")$baseline
+baseline <- cbind(baseline1[,1:10], baseline2[,11:20])
+
+matplot(t(baseline), type = "l", col = "grey")
+lines(rowMeans(t(baseline)), col = 2, lwd = 2)
+
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
+
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+scostamento = t(scostamento)
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
+matplot(t(scostamento), type = "l", col = "grey")
+lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+```
