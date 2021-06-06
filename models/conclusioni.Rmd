@@ -42,6 +42,16 @@ print(fitStanFpcaFinal)
 posterior = as.data.frame(fitStanFpcaFinal)
 ```
 
+```{r convergence_diag}
+library(rstan)
+pars = names(fitStanFpcaFinal$coefficients[1:33])
+mcmc_rhat(rhat(fitStanFpcaFinal))
+mcmc_rhat(rhat(fitStanFpcaFinal, pars = pars))
+ggsave("rhat.png", device = png(), width = 11, height = 8, dpi = 700)
+
+mcmc_acf(posterior, pars=pars)
+```
+
 ```{r func}
 get_posterior = function(posterior, fpc, syllable1, syllable2, fixed = "none", subject = NULL){
     # TODO: Docstring for get_posterior.
@@ -501,6 +511,7 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+scostamento = t(scostamento)
 matplot(t(scostamento), type = "l", col = "grey")
 lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```
@@ -544,19 +555,40 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ## (T3, T3) e (T4, T3) messi viciny
 
 ```{r}
-scostamento1 <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
-                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
+library(ggpubr)
+scostamento1 <- t(cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20]))
 
-scostamento2 <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
-                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
+scostamento2 <- t(cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
+                     get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20]))
 
+meanf = rowMeans(scostamento1)
+qtl = apply(scostamento1, 1, quantile, p=c(0.025, 0.975))
+df1 = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df1) = c("time", "mean", "lcl", "ucl")
+df1 = cbind(df1, "idx" = df1$time > 10)
 
-png("mediazione.png", 2000, 1200, res = 150)
-par(mfrow = c(1,2))
-matplot(t(scostamento1), type = "l", col = "grey")
-lines(rowMeans(t(scostamento1)), col = 2, lwd = 2)
-matplot(t(scostamento2), type = "l", col = "grey")
-lines(rowMeans(t(scostamento2)), col = 2, lwd = 2)
+T3T3 <- ggplot(df1, aes(x = time))+
+    geom_line(aes(y = mean, group = idx), colour = "blue", alpha=0.9) + 
+    geom_ribbon(aes(ymin = lcl, ymax = ucl, group = idx), colour = "darkgray", alpha=0.2) +
+    ggtitle("Mediazione di T3-T3") +
+    theme(plot.title = element_text(hjust = 0.5))
+
+meanf = rowMeans(scostamento2)
+qtl = apply(scostamento2, 1, quantile, p=c(0.025, 0.975))
+df2 = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df2) = c("time", "mean", "lcl", "ucl")
+df2 = cbind(df2, "idx" = df1$time > 10)
+
+T4T4 <- ggplot(df2, aes(x = time))+
+    geom_line(aes(y = mean, group = idx), colour = "blue", alpha=0.9) + 
+    geom_ribbon(aes(ymin = lcl, ymax = ucl, group = idx), colour = "darkgray", alpha=0.2) +
+    ggtitle("Mediazione di T4-T3") +
+    theme(plot.title = element_text(hjust = 0.5))
+
+ggarrange(T3T3, T4T4, nrow = 2)
+ggsave("mediazione.png", device = png(), width = 10, height = 8, dpi = 600)
+
 ```
 
 
