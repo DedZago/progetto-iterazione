@@ -448,24 +448,52 @@ baseline1 <- get_posterior(posterior, fpca, "T1", "T1", fixed = "first")$baselin
 baseline2 <- get_posterior(posterior, fpca, "T1", "T1", fixed = "second")$baseline
 baseline <- cbind(baseline1[,1:10], baseline2[,11:20])
 
-matplot(t(baseline), type = "l", col = "grey")
-lines(rowMeans(t(baseline)), col = 2, lwd = 2)
+meanf = rowMeans(t(baseline))
+qtl = apply(baseline, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+pbase <- df %>%
+            ggplot(aes(x = time))+
+                geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+                geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+                labs(title = "Baseline: (T1, T1)")
+pbase
 ```
+
+
 ## (T2, T2)
 
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
-matplot(t(scostamento), type = "l", col = "grey")
-lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+meanf = rowMeans(t(scostamento))
+qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+p22 <- df %>%
+        ggplot(aes(x = time))+
+            geom_line(aes(y = mean), colour = "blue", alpha=0.9, ) + 
+            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+            labs(title = "Mediazione di (T2, T2)")
+p22
 ```
 ## (T2, T3)
 
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
-matplot(t(scostamento), type = "l", col = "grey")
-lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+meanf = rowMeans(t(scostamento))
+qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+p23 <- df %>%
+        ggplot(aes(x = time))+
+            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+            labs(title = "Mediazione di (T2, T3)")
+p23
 ```
 ## (T2, T4) (no mediazione)
 
@@ -473,8 +501,17 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T2", "T1", fixed = "second")$scostamento[,11:20])
 
-matplot(t(scostamento + baseline), type = "l", col = "grey")
-lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+meanf = rowMeans(t(scostamento))
+qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+p24 <- df %>%
+        ggplot(aes(x = time))+
+            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+            labs(title = "Mediazione di (T2, T4)")
+p24
 ```
 
 ## (T3, T2) (no mediazione)
@@ -482,24 +519,53 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
-matplot(t(scostamento), type = "l", col = "grey")
-lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+
+meanf = rowMeans(t(scostamento))
+qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+p32 <- df %>%
+        ggplot(aes(x = time))+
+            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+            labs(title = "Mediazione di (T3, T2)")
+p32
 ```
 ## (T3, T3) (mediazione)
 
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
-matplot(t(scostamento), type = "l", col = "grey")
-lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+meanf = rowMeans(t(scostamento))
+qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+p33 <- df %>%
+        ggplot(aes(x = time))+
+            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+            labs(title = "Mediazione di (T3, T3)")
+
+p33
 ```
 ## (T3, T4) (no mediazione)
 
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T3", "T1", fixed = "second")$scostamento[,11:20])
-matplot(t(scostamento), type = "l", col = "grey")
-lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+meanf = rowMeans(t(scostamento))
+qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+p34 <- df %>%
+        ggplot(aes(x = time))+
+            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+            labs(title = "Mediazione di (T3, T4)")
+p34
 ```
 
 ## (T4, T2) (no mediazione)
@@ -507,8 +573,17 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T2", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
-matplot(t(scostamento), type = "l", col = "grey")
-lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+meanf = rowMeans(t(scostamento))
+qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+p42 <- df %>%
+        ggplot(aes(x = time))+
+            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+            labs(title = "Mediazione di (T4, T2)")
+p42
 ```
 
 ## (T4, T3) (mediazione)
@@ -516,8 +591,19 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T3", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
-matplot(t(scostamento), type = "l", col = "grey")
-lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+
+meanf = rowMeans(t(scostamento))
+qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+p43 <- df %>%
+        ggplot(aes(x = time))+
+            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+            labs(title = "Mediazione di (T4, T3)")
+
+p43
 ```
 
 ## (T4, T4) (no mediazione)
@@ -525,11 +611,58 @@ lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
 ```{r}
 scostamento <- cbind(get_posterior(posterior, fpca, "T1", "T4", fixed = "first")$scostamento[,1:10],
                      get_posterior(posterior, fpca, "T4", "T1", fixed = "second")$scostamento[,11:20])
-matplot(t(scostamento), type = "l", col = "grey")
-lines(rowMeans(t(scostamento)), col = 2, lwd = 2)
+
+meanf = rowMeans(t(scostamento))
+qtl = apply(scostamento, 2, quantile, p=c(0.25, 0.975))
+df = data.frame(cbind(1:20, meanf, t(qtl)))
+colnames(df) = c("time", "mean", "lcl", "ucl")
+p44 <- df %>%
+        ggplot(aes(x = time))+
+            geom_line(aes(y = mean), colour = "blue", alpha=0.9) + 
+            geom_ribbon(aes(ymin = lcl, ymax = ucl), colour = "darkgray", alpha=0.2) +
+            labs(title = "Mediazione di (T4, T4)")
+p44
 ```
 
 
+
+```{r}
+library(cowplot)
+
+
+
+jpeg("mediazione_tutto.png", width = 800, height = 800)
+# 2. Create the plot
+plot_grid(p22, p23, p24,
+          p32, p33, p34, 
+          p42, p43, p44,
+          ncol = 3)
+
+# 3. Close the file
+dev.off()
+mediazione_tutto <- plot_grid(p22, p23, p24,
+          p32, p33, p34, 
+          p42, p43, p44,
+          ncol = 3)
+mediazione_tutto
+
+ggsave(mediazione_tutto, filename = "mediazione_tutto.pdf", device = "pdf", width=16, height=10, dpi = 200
+)
+```
+
+```{r}
+mediazione_interessante <- plot_grid(p33, p43)
+mediazione_interessante
+
+jpeg("mediazione_interessante.png", width = 800, height = 500)
+# 2. Create the plot
+plot_grid(p33, p43)
+
+# 3. Close the file
+dev.off()
+
+
+```
 
 
 
